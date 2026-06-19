@@ -907,9 +907,14 @@ export const DB = {
     const emailLower = user.email.toLowerCase();
     const allUsers = await DB.getUsers();
 
-    // Check if email already registered
-    if (allUsers.some((u: any) => u.email.toLowerCase() === emailLower)) {
-      return { success: false, error: 'এই ইমেইল ঠিকানা দিয়ে ইতিপূর্বে অ্যাকাউন্ট খোলা হয়েছে!' };
+    // Check if email already registered (with exception to the default initial admin/placeholder)
+    const existingIndex = allUsers.findIndex((u: any) => u.email.toLowerCase() === emailLower);
+    if (existingIndex >= 0) {
+      const existing = allUsers[existingIndex];
+      const isPlaceholder = existing.password === 'adminpassword' || existing.uid === 'admin-enath' || existing.email === 'enath629@gmail.com';
+      if (!isPlaceholder) {
+        return { success: false, error: 'এই ইমেইল ঠিকানা দিয়ে ইতিপূর্বে অ্যাকাউন্ট খোলা হয়েছে!' };
+      }
     }
 
     // Prepare complete user record with both uid and id populated to prevent schema mismatch
@@ -919,25 +924,27 @@ export const DB = {
       uid: user.uid || user.id || 'usr-' + Math.random().toString(36).substring(2, 9)
     };
 
-    // Save to local list
+    // Save to local list, filtering out any placeholder record with the same email
     const local = getLocalStore<any[]>(KEYS.USERS, []);
-    local.push(augmentedUser);
-    setLocalStore(KEYS.USERS, local);
+    const filteredLocal = local.filter((u: any) => u.email.toLowerCase() !== emailLower);
+    filteredLocal.push(augmentedUser);
+    setLocalStore(KEYS.USERS, filteredLocal);
 
     // Save to Supabase if active
     if (isSupabaseActive && supabase) {
       try {
-        // Build clean insert payload containing both id (for SQL primary key) and uid (for app compatibility)
+        // Build clean insert payload containing exactly the columns present in the SQL table schema (no uid column)
         const payload = {
           id: augmentedUser.id,
-          uid: augmentedUser.uid,
           email: augmentedUser.email,
           password: augmentedUser.password,
           displayName: augmentedUser.displayName,
           phoneNumber: augmentedUser.phoneNumber,
           createdAt: augmentedUser.createdAt
         };
-        const { error } = await supabase.from('users').insert(payload);
+        
+        // Use upsert to handle both new inserting & updating if a placeholder with that email exists
+        const { error } = await supabase.from('users').upsert(payload);
         if (error) {
           console.error('Supabase user registration failed', error);
         }
