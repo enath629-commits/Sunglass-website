@@ -1,0 +1,6 @@
+{
+  "name": "E-Commerce Landing Page",
+  "description": "A highly professional E-commerce landing page focusing on Watches and Sunglasses with a full Admin Panel, Google Auth, real-time live chat, cart visualizer, sales analytics, and Supabase integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
