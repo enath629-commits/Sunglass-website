@@ -878,16 +878,29 @@ export const DB = {
 
   // USER AUTH SYSTEM
   getUsers: async (): Promise<any[]> => {
+    const local = getLocalStore<any[]>(KEYS.USERS, []);
     if (isSupabaseActive && supabase) {
       try {
         const { data, error } = await supabase.from('users').select('*');
-        if (!error && data) return data;
+        if (!error && data) {
+          // Merge local storage users with Supabase users, removing duplicates by email
+          const merged = [...data];
+          local.forEach((lu: any) => {
+            const exists = merged.some(
+              (su: any) => su.email?.toLowerCase() === lu.email?.toLowerCase()
+            );
+            if (!exists) {
+              merged.push(lu);
+            }
+          });
+          return merged;
+        }
         console.warn('Supabase users fetch failed, falling back to LocalDB', error);
       } catch (err) {
         console.warn('Supabase users fetch failed, falling back to LocalDB', err);
       }
     }
-    return getLocalStore<any[]>(KEYS.USERS, []);
+    return local;
   },
 
   registerUser: async (user: any): Promise<{ success: boolean; error?: string }> => {
@@ -899,15 +912,32 @@ export const DB = {
       return { success: false, error: 'এই ইমেইল ঠিকানা দিয়ে ইতিপূর্বে অ্যাকাউন্ট খোলা হয়েছে!' };
     }
 
+    // Prepare complete user record with both uid and id populated to prevent schema mismatch
+    const augmentedUser = {
+      ...user,
+      id: user.id || user.uid || 'usr-' + Math.random().toString(36).substring(2, 9),
+      uid: user.uid || user.id || 'usr-' + Math.random().toString(36).substring(2, 9)
+    };
+
     // Save to local list
     const local = getLocalStore<any[]>(KEYS.USERS, []);
-    local.push(user);
+    local.push(augmentedUser);
     setLocalStore(KEYS.USERS, local);
 
     // Save to Supabase if active
     if (isSupabaseActive && supabase) {
       try {
-        const { error } = await supabase.from('users').insert(user);
+        // Build clean insert payload containing both id (for SQL primary key) and uid (for app compatibility)
+        const payload = {
+          id: augmentedUser.id,
+          uid: augmentedUser.uid,
+          email: augmentedUser.email,
+          password: augmentedUser.password,
+          displayName: augmentedUser.displayName,
+          phoneNumber: augmentedUser.phoneNumber,
+          createdAt: augmentedUser.createdAt
+        };
+        const { error } = await supabase.from('users').insert(payload);
         if (error) {
           console.error('Supabase user registration failed', error);
         }
@@ -930,7 +960,11 @@ export const DB = {
     if (matched) {
       // return clear user without exposing password field
       const { password: _, ...clean } = matched;
-      return clean;
+      return {
+        ...clean,
+        uid: clean.uid || clean.id,
+        id: clean.id || clean.uid
+      };
     }
     return null;
   },
