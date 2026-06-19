@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   MessageSquare, Phone, X, Send, Sparkles, Check, 
-  HelpCircle, ShieldCheck, CheckCheck 
+  HelpCircle, ShieldCheck, CheckCheck, Headphones 
 } from 'lucide-react';
 import { ChatMessage, User } from '../types';
 import { DB } from '../lib/db';
@@ -353,39 +353,48 @@ export default function ContactButtons({
         </AnimatePresence>
 
         {/* Master Floating Menu Switch Button */}
-        <motion.button
-          id="contact-menu-trigger"
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 to-green-550 text-white shadow-xl hover:shadow-emerald-500/20 flex items-center justify-center transition-all cursor-pointer border border-emerald-500/10 focus:outline-none"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.94 }}
-          title="যোগাযোগ ও লাইভ চ্যাট"
-        >
-          <AnimatePresence mode="wait">
-            {isOpen ? (
-              <motion.div
-                key="close"
-                initial={{ rotate: -45, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: 45, opacity: 0 }}
-              >
-                <X size={24} />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="chat"
-                initial={{ rotate: 45, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: -45, opacity: 0 }}
-                className="relative"
-              >
-                <MessageSquare size={24} />
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-ping" />
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
-              </motion.div>
+        <div className="flex items-center">
+          <motion.button
+            id="contact-menu-trigger"
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 to-green-550 text-white shadow-xl hover:shadow-emerald-500/20 flex items-center justify-center transition-all cursor-pointer border border-white/10 focus:outline-none relative group"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            title="যোগাযোগ ও লাইভ চ্যাট"
+          >
+            {/* Pulsing Aura Rings */}
+            {!isOpen && (
+              <>
+                <span className="absolute inset-0 rounded-full bg-emerald-500/30 animate-pulse -z-10" />
+                <span className="absolute -inset-1.5 rounded-full bg-emerald-500/10 animate-ping -z-10 opacity-75" />
+              </>
             )}
-          </AnimatePresence>
-        </motion.button>
+
+            <AnimatePresence mode="wait">
+              {isOpen ? (
+                <motion.div
+                  key="close"
+                  initial={{ rotate: -45, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 45, opacity: 0 }}
+                >
+                  <X size={22} className="stroke-[2.5]" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="chat"
+                  initial={{ rotate: 45, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: -45, opacity: 0 }}
+                  className="relative flex items-center justify-center"
+                >
+                  <MessageSquare size={24} className="stroke-[2.2] animate-bounce-slow text-white" />
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </div>
 
       </div>
     </div>

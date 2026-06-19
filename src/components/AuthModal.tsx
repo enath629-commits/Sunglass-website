@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, User, Phone, LogIn, ChevronRight, Sparkles } from 'lucide-react';
 import { User as AuthUser } from '../types';
+import { DB } from '../lib/db';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -17,42 +18,66 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, theme }: Aut
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
-    // Simulate Auth check with premium responsive delay
-    setTimeout(() => {
-      if (!email || !password) {
-        setError('অনুগ্রহ করে সব তথ্য দিন!');
-        setLoading(false);
-        return;
-      }
-
-      if (!isLogin && (!name || !phone)) {
-        setError('সব ফিল্ড পূরণ করা আবশ্যক!');
-        setLoading(false);
-        return;
-      }
-
-      // Generate a mock auth user
-      const loggedUser: AuthUser = {
-        uid: email === 'enath629@gmail.com' ? 'admin-enath' : 'usr-' + Math.random().toString(36).substring(2, 9),
-        email: email.toLowerCase(),
-        displayName: isLogin ? (email === 'enath629@gmail.com' ? 'Admin Enath' : email.split('@')[0]) : name,
-        phoneNumber: isLogin ? '01700000000' : phone,
-        createdAt: new Date().toISOString()
-      };
-
-      // Save user session to localStorage
-      localStorage.setItem('__user_session__', JSON.stringify(loggedUser));
-      onAuthSuccess(loggedUser);
+    if (!email || !password) {
+      setError('অনুগ্রহ করে সব তথ্য দিন!');
       setLoading(false);
-      onClose();
-    }, 1200);
+      return;
+    }
+
+    if (!isLogin && (!name || !phone)) {
+      setError('সব ফিল্ড পূরণ করা আবশ্যক!');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (isLogin) {
+        // LOGIN ROUTINE WITH DATABASE VALIDATION
+        const verifiedUser = await DB.verifyUser(email, password);
+        if (verifiedUser) {
+          // Save user session to localStorage
+          localStorage.setItem('__user_session__', JSON.stringify(verifiedUser));
+          onAuthSuccess(verifiedUser);
+          setLoading(false);
+          onClose();
+        } else {
+          setError('ভুল জিমেইল (Gmail) অথবা পাসওয়ার্ড দেওয়া হয়েছে! সঠিক তথ্য দিয়ে আবার চেষ্টা করুন।');
+          setLoading(false);
+        }
+      } else {
+        // SIGNUP ROUTINE WITH DATABASE INSERT
+        const newUser = {
+          uid: 'usr-' + Math.random().toString(36).substring(2, 9),
+          email: email.trim().toLowerCase(),
+          password: password,
+          displayName: name,
+          phoneNumber: phone,
+          createdAt: new Date().toISOString()
+        };
+
+        const result = await DB.registerUser(newUser);
+        if (result.success) {
+          setSuccess('আপনার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে! এখন সঠিক পাসওয়ার্ড দিয়ে লগইন করুন।');
+          setIsLogin(true); // Switch to login view immediately
+          setLoading(false);
+        } else {
+          setError(result.error || 'অ্যাকাউন্ট তৈরি করা যায়নি!');
+          setLoading(false);
+        }
+      }
+    } catch (err) {
+      setError('ডাটাবেস কানেকশন ত্রুটি! দয়া করে আবার চেষ্টা করুন।');
+      setLoading(false);
+    }
   };
 
   const handleGoogleLogin = () => {
@@ -133,6 +158,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, theme }: Aut
               {error && (
                 <div className="p-3 text-xs bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-center font-medium">
                   {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="p-3 text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-center font-medium">
+                  {success}
                 </div>
               )}
 
@@ -265,6 +296,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, theme }: Aut
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setError('');
+                    setSuccess('');
                   }}
                   className="ml-1 text-emerald-500 hover:underline font-semibold"
                 >

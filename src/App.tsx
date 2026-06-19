@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   // Theme & Layout Settings
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [activeCategory, setActiveCategory] = useState<CategoryType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -32,7 +32,14 @@ export default function App() {
   const [config, setConfig] = useState<any>({
     logoText: 'CHRONO & SHADE',
     whatsappNumber: '+8801811122233',
-    hotlineNumber: '01811122233'
+    hotlineNumber: '01811122233',
+    arrivalsTitle: 'Exclusive Handpicked Designs',
+    arrivalsSubtitle: 'LATEST ARRIVALS',
+    brandStoryTitle: 'CHRONO & SHADE - Premium Lifestyle Partner',
+    brandStorySubtitle: 'Our Craftsmanship',
+    brandStoryDescription: 'We believe watches and sunglasses are not merely accessories, but assertions of status and personality. Every chronograph watch and polarized lens is meticulously evaluated by our multi-tier Quality Assurance team. Direct distribution allows us to offer premium products... ',
+    themePrimaryColor: '#10b981',
+    themeAccentColor: '#f97316'
   });
 
   // Modal Triggers
@@ -48,7 +55,7 @@ export default function App() {
     if (savedTheme) {
       setTheme(savedTheme);
     } else {
-      setTheme('light');
+      setTheme('dark');
     }
 
     // Read active user session
@@ -178,6 +185,33 @@ export default function App() {
     <div className={`min-h-screen flex flex-col justify-between transition-colors duration-300 ${
       isDark ? 'bg-neutral-950 text-neutral-100' : 'bg-neutral-50/60 text-neutral-800'
     }`} id="ecommerce-app-root">
+
+      {/* Dynamic Admin-Configurable Theme Color Overrides */}
+      <style>{`
+        .bg-emerald-500, .bg-emerald-600, .bg-emerald-650 {
+          background-color: ${config.themePrimaryColor || '#10b981'} !important;
+        }
+        .text-emerald-500, .text-emerald-600, .text-emerald-405, .text-emerald-400 {
+          color: ${config.themePrimaryColor || '#10b981'} !important;
+        }
+        .border-emerald-500, .border-emerald-650 {
+          border-color: ${config.themePrimaryColor || '#10b981'} !important;
+        }
+        .from-emerald-600, .from-emerald-650 {
+          --tw-gradient-from: ${config.themePrimaryColor || '#10b981'} !important;
+          --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, ${config.themePrimaryColor || '#10b981'}00) !important;
+        }
+        .to-green-500 {
+          --tw-gradient-to: ${config.themePrimaryColor || '#10b981'}dd !important;
+        }
+        .text-orange-500, .bg-orange-500, .bg-pink-505, .bg-orange-555 {
+          background-color: ${config.themeAccentColor || '#f97316'} !important;
+          color: white !important;
+        }
+        .text-sky-505, .text-orange-500 {
+          color: ${config.themeAccentColor || '#f97316'} !important;
+        }
+      `}</style>
       
       {/* 1. Header Bar */}
       <Header
@@ -313,9 +347,11 @@ export default function App() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-extrabold font-sans">
                     <Sparkles size={14} className="animate-spin" />
-                    <span>LATEST ARRIVALS</span>
+                    <span>{config.arrivalsSubtitle || 'LATEST ARRIVALS'}</span>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-black tracking-tight font-sans">Exclusive Handpicked Designs</h3>
+                  <h3 className="text-xl sm:text-2xl font-black tracking-tight font-sans">
+                    {config.arrivalsTitle || 'Exclusive Handpicked Designs'}
+                  </h3>
                 </div>
 
                 {/* Filter and Search parameters */}
@@ -423,11 +459,15 @@ export default function App() {
 
               <div className="w-full md:w-[60%] space-y-4 text-xs sm:text-sm">
                 <div className="space-y-1.5">
-                  <span className="p-1 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 font-extrabold text-[10px] uppercase font-sans">Our Craftsmanship</span>
-                  <h3 className="text-lg sm:text-xl font-black font-sans leading-tight">CHRONO & SHADE - Premium Lifestyle Partner</h3>
+                  <span className="p-1 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 font-extrabold text-[10px] uppercase font-sans">
+                    {config.brandStorySubtitle || 'Our Craftsmanship'}
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-black font-sans leading-tight">
+                    {config.brandStoryTitle || 'CHRONO & SHADE - Premium Lifestyle Partner'}
+                  </h3>
                 </div>
                 <p className="text-neutral-400 leading-relaxed">
-                  We believe watches and sunglasses are not merely accessories, but assertions of status and personality. Every chronograph watch and polarized lens is meticulously evaluated by our multi-tier Quality Assurance team. Direct distribution allows us to offer premium products, luxury feels, and flawless utility at unmatched wholesale pricing in the region.
+                  {config.brandStoryDescription || 'We believe watches and sunglasses are not merely accessories, but assertions of status and personality. Every chronograph watch and polarized lens is meticulously evaluated by our multi-tier Quality Assurance team. Direct distribution allows us to offer premium products, luxury feels, and flawless utility at unmatched wholesale pricing in the region.'}
                 </p>
                 <div className="flex gap-4 items-center">
                   <div className="space-y-0.5">

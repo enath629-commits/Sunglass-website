@@ -22,7 +22,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelProps) {
   // Navigation Tabs
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'chats' | 'banners' | 'admins' | 'database' | 'reviews' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'chats' | 'banners' | 'admins' | 'database' | 'reviews' | 'settings' | 'customers'>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Core Lists States
@@ -42,13 +42,23 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
   const [sbKey, setSbKey] = useState('');
   const [dbSaveSuccess, setDbSaveSuccess] = useState('');
 
+  // Registered Customer Users
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+
   // Website Settings Configuration States
   const [siteConfig, setSiteConfig] = useState<any>({
     logoText: 'CHRONO & SHADE',
     whatsappNumber: '+8801811122233',
     hotlineNumber: '01811122233',
     deliveryChargeInsideDhaka: 80,
-    deliveryChargeOutsideDhaka: 120
+    deliveryChargeOutsideDhaka: 120,
+    arrivalsTitle: 'Exclusive Handpicked Designs',
+    arrivalsSubtitle: 'LATEST ARRIVALS',
+    brandStoryTitle: 'CHRONO & SHADE - Premium Lifestyle Partner',
+    brandStorySubtitle: 'Our Craftsmanship',
+    brandStoryDescription: 'We believe watches and sunglasses are not merely accessories, but assertions of status and personality. Every chronograph watch and polarized lens is meticulously evaluated by our multi-tier Quality Assurance team. Direct distribution allows us to offer premium products, luxury feels, and flawless utility at unmatched wholesale pricing in the region.',
+    themePrimaryColor: '#10b981',
+    themeAccentColor: '#f97316'
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -122,6 +132,14 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
       setSystemReviews(revs);
     } catch (e) {
       console.error('Failed to sync reviews', e);
+    }
+
+    // Fetch registered customer users
+    try {
+      const uLst = await DB.getUsers();
+      setRegisteredUsers(uLst);
+    } catch (e) {
+      console.error('Failed to sync users', e);
     }
 
     // Fetch configuration
@@ -410,6 +428,18 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
     setSavingSettings(false);
   };
 
+  const handleSaveSubSection = async (sectionName: string) => {
+    setSavingSettings(true);
+    const ok = await DB.saveConfig(siteConfig);
+    if (ok) {
+      alert(`সফলভাবে ${sectionName} আপডেট করা হয়েছে!`);
+      syncAllData();
+    } else {
+      alert(`${sectionName} আপডেট করার সময় সমস্যা হয়েছে।`);
+    }
+    setSavingSettings(false);
+  };
+
   const isDark = theme === 'dark';
 
   return (
@@ -538,6 +568,18 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
               <span>সহকারী অ্যাডমিন ও ক্ষমতা</span>
             </button>
           )}
+
+          <button
+            onClick={() => { setActiveTab('customers'); setMobileMenuOpen(false); }}
+            className={`w-full text-left py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${
+              activeTab === 'customers' 
+                ? 'bg-gradient-to-r from-emerald-600 to-green-500 text-white font-bold' 
+                : isDark ? 'hover:bg-neutral-800 text-neutral-300' : 'hover:bg-neutral-100 text-neutral-700'
+            }`}
+          >
+            <Users size={16} />
+            <span>নিবন্ধিত কাস্টমারবৃন্দ</span>
+          </button>
 
           <button
             onClick={() => { setActiveTab('database'); setMobileMenuOpen(false); }}
@@ -1861,6 +1903,16 @@ CREATE TABLE admins (
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. Customer Users Table
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  "displayName" TEXT NOT NULL,
+  "phoneNumber" TEXT,
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Insert Primary Super Admin default
 INSERT INTO admins (id, email, name, "addedBy", permissions)
 VALUES (
@@ -1869,6 +1921,16 @@ VALUES (
   'Super Admin - Enath', 
   'System Creator', 
   '{"manageProducts": true, "manageOrders": true, "manageBanners": true, "manageChats": true, "manageAdmins": true}'
+) ON CONFLICT (email) DO NOTHING;
+
+-- Insert default admin user profile
+INSERT INTO users (id, email, password, "displayName", "phoneNumber")
+VALUES (
+  'admin-enath',
+  'enath629@gmail.com',
+  'adminpassword',
+  'Admin Enath',
+  '01811122233'
 ) ON CONFLICT (email) DO NOTHING;`}
                   </pre>
 
@@ -1885,108 +1947,307 @@ VALUES (
 
         {/* TAB 8: WEBSITE CUSTOM SETTINGS */}
         {activeTab === 'settings' && (
-          <div className="space-y-6" id="settings-tab-panel">
+          <div className="space-y-8" id="settings-tab-panel">
             <div>
-              <h2 className="text-lg sm:text-xl font-extrabold font-sans">ওয়েবসাইট সেটিংস ও ডেলিভারি চার্জ কন্ট্রোল</h2>
-              <p className="text-xs text-neutral-400 mt-1">লোগো লেখা, হটলাইন নাম্বার এবং ঢাকার ভেতরে/বাইরে ডেলিভারি চার্জ এখান থেকে এডিট ও সেভ করতে পারবেন।</p>
+              <h2 className="text-lg sm:text-xl font-extrabold font-sans text-neutral-850 dark:text-white">ওয়েবসাইট সেটিংস, কালার ব্র্যান্ডিং ও টেক্সট কন্ট্রোল</h2>
+              <p className="text-xs text-neutral-450 mt-1">লোগো লেখা, হটলাইন নাম্বার, কাস্টমার ডেলিভারি চার্জ, ওয়েবসাইটের কালার ব্র্যান্ডিং এবং চমৎকার টাইটেলসমূহ আলাদা সেকশনে এডিট ও আপডেট করুন।</p>
             </div>
 
-            <div className="max-w-2xl">
-              <form onSubmit={handleSaveSettings} className={`p-6 rounded-2xl border text-xs sm:text-sm space-y-5 ${
-                isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-100 shadow-sm'
-              }`} id="website-settings-form">
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Delivery Charge Inside Dhaka */}
-                  <div className="space-y-1">
-                    <label className="text-xs text-neutral-400 font-bold font-sans">ঢাকার ভিতরে ডেলিভারি চার্জ (৳) *</label>
-                    <input
-                      type="number"
-                      required
-                      value={siteConfig.deliveryChargeInsideDhaka || 80}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, deliveryChargeInsideDhaka: Number(e.target.value) })}
-                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-bold ${
-                        isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
-                      }`}
-                    />
+            <div className="max-w-3xl space-y-8">
+              
+              {/* SECTION 1: GENERAL CONTROLS & DELIVERY CHARGE */}
+              <div className={`p-6 rounded-2xl border ${
+                isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-150 shadow-sm'
+              }`}>
+                <div className="border-b pb-3 mb-4 dark:border-neutral-800 border-neutral-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-sm text-emerald-500">সেকশন ১: ডেলিভারি চার্জ ও জেনারেল সেটিংস (General configuration)</h3>
+                    <p className="text-[11px] text-neutral-400">ঢাকার ভেতরে/বাইরে ডেলিভারি কুরিয়ার চার্জ এবং মূল হটলাইন ডাটাবেস।</p>
                   </div>
-
-                  {/* Delivery Charge Outside Dhaka */}
-                  <div className="space-y-1">
-                    <label className="text-xs text-neutral-400 font-bold font-sans">ঢাকার বাইরে ডেলিভারি চার্জ (৳) *</label>
-                    <input
-                      type="number"
-                      required
-                      value={siteConfig.deliveryChargeOutsideDhaka || 120}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, deliveryChargeOutsideDhaka: Number(e.target.value) })}
-                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-bold ${
-                        isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
-                      }`}
-                    />
-                  </div>
+                  <span className="p-1 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold font-sans text-[10px]">SECTION 1</span>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs text-neutral-400 font-bold">ওয়েবসাইট লোগো টেক্সট (Logo Title)</label>
-                  <input
-                    type="text"
-                    required
-                    value={siteConfig.logoText || 'CHRONO & SHADE'}
-                    onChange={(e) => setSiteConfig({ ...siteConfig, logoText: e.target.value })}
-                    className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-semibold ${
-                      isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
-                    }`}
-                  />
-                </div>
+                <div className="space-y-4 text-xs sm:text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Delivery Charge Inside Dhaka */}
+                    <div className="space-y-1">
+                      <label className="text-xs text-neutral-400 font-bold font-sans">ঢাকার ভিতরে ডেলিভারি চার্জ (৳) *</label>
+                      <input
+                        type="number"
+                        required
+                        value={siteConfig.deliveryChargeInsideDhaka || 80}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, deliveryChargeInsideDhaka: Number(e.target.value) })}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-bold ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                        }`}
+                      />
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Whatsapp Number */}
+                    {/* Delivery Charge Outside Dhaka */}
+                    <div className="space-y-1">
+                      <label className="text-xs text-neutral-400 font-bold font-sans">ঢাকার বাইরে ডেলিভারি চার্জ (৳) *</label>
+                      <input
+                        type="number"
+                        required
+                        value={siteConfig.deliveryChargeOutsideDhaka || 120}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, deliveryChargeOutsideDhaka: Number(e.target.value) })}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-bold ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
-                    <label className="text-xs text-neutral-400 font-bold font-sans">হোয়াটসঅ্যাপ ব্যবসায়িক নাম্বার *</label>
+                    <label className="text-xs text-neutral-400 font-bold">ওয়েবসাইট লোগো টেক্সট (Logo Title)</label>
                     <input
                       type="text"
                       required
-                      value={siteConfig.whatsappNumber || '+8801811122233'}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, whatsappNumber: e.target.value })}
-                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-semibold ${
+                      value={siteConfig.logoText || ''}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, logoText: e.target.value })}
+                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-semibold ${
                         isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
                       }`}
                     />
                   </div>
 
-                  {/* Hotline Number */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Whatsapp Number */}
+                    <div className="space-y-1">
+                      <label className="text-xs text-neutral-400 font-bold font-sans">হোয়াটসঅ্যাপ ব্যবসায়িক নাম্বার *</label>
+                      <input
+                        type="text"
+                        required
+                        value={siteConfig.whatsappNumber || ''}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, whatsappNumber: e.target.value })}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-semibold ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Hotline Number */}
+                    <div className="space-y-1">
+                      <label className="text-xs text-neutral-400 font-bold font-sans">হটলাইন সাপোর্ট নাম্বার *</label>
+                      <input
+                        type="text"
+                        required
+                        value={siteConfig.hotlineNumber || ''}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, hotlineNumber: e.target.value })}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-semibold ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveSubSection('ডেলিভারি চার্জ ও জেনারেল সেটিংস')}
+                      disabled={savingSettings}
+                      className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 hover:brightness-110 text-white font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all font-sans shadow-md"
+                    >
+                      <Check size={14} />
+                      <span>ডেলিভারি ও যোগাযোগ আপডেট করুন</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+
+              {/* SECTION 2: BRAND THEME COLOR CONFIG */}
+              <div className={`p-6 rounded-2xl border ${
+                isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-150 shadow-sm'
+              }`}>
+                <div className="border-b pb-3 mb-4 dark:border-neutral-800 border-neutral-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-sm text-emerald-500">সেকশন ২: কালার ব্র্যান্ডিং ও থিম সেটিংস (Color Palette & Custom Theme)</h3>
+                    <p className="text-[11px] text-neutral-400">পুরো ওয়েবসাইটের মূল প্রাথমিক ডার্ক থিম কালার এবং আকর্ষণীয় অ্যাকসেন্ট কালার সেটিংস।</p>
+                  </div>
+                  <span className="p-1 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold font-sans text-[10px]">SECTION 2</span>
+                </div>
+
+                <div className="space-y-4 text-xs sm:text-sm">
+                  <p className="text-neutral-400 text-xs">নিচের অপশনগুলোর মাধ্যমে আপনার ব্র্যান্ডের সাথে সামঞ্জস্য রেখে ওয়েবসাইটের বাটন, আইকন এবং ব্যাজের কালারগুলো সহজেই কাস্টমাইজ করে নিন।</p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* Primary Color Picker */}
+                    <div className="p-4 rounded-xl dark:bg-neutral-850 bg-neutral-50/50 border dark:border-neutral-800 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-neutral-400">প্রাথমিক থিম কালার (Primary Brand Color)</label>
+                        <div 
+                          className="w-5 h-5 rounded-full border border-white/20 shadow-sm" 
+                          style={{ backgroundColor: siteConfig.themePrimaryColor || '#10b981' }} 
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={siteConfig.themePrimaryColor || '#10b981'}
+                          onChange={(e) => setSiteConfig({ ...siteConfig, themePrimaryColor: e.target.value })}
+                          className="w-12 h-9 p-0.5 border cursor-pointer rounded-lg bg-transparent border-neutral-700"
+                        />
+                        <input
+                          type="text"
+                          value={siteConfig.themePrimaryColor || '#10b981'}
+                          onChange={(e) => setSiteConfig({ ...siteConfig, themePrimaryColor: e.target.value })}
+                          placeholder="#10b981"
+                          maxLength={7}
+                          className={`flex-grow p-2 rounded-lg border focus:outline-none font-mono text-center font-bold text-xs ${
+                            isDark ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-250 text-neutral-805'
+                          }`}
+                        />
+                      </div>
+                      <p className="text-[10px] text-neutral-400">প্রাইমারি বাটন, কার্ড বর্ডার, মেইন টাইটেল হাইলাইটার এবং লাইভ চ্যাট ট্রিকস এই কালার ব্যবহার করবে।</p>
+                    </div>
+
+                    {/* Accent Color Picker */}
+                    <div className="p-4 rounded-xl dark:bg-neutral-850 bg-neutral-50/50 border dark:border-neutral-800 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-neutral-400">সেকেন্ডারি অ্যাকসেন্ট কালার (Promo Badge Color)</label>
+                        <div 
+                          className="w-5 h-5 rounded-full border border-white/20 shadow-sm" 
+                          style={{ backgroundColor: siteConfig.themeAccentColor || '#f97316' }} 
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={siteConfig.themeAccentColor || '#f97316'}
+                          onChange={(e) => setSiteConfig({ ...siteConfig, themeAccentColor: e.target.value })}
+                          className="w-12 h-9 p-0.5 border cursor-pointer rounded-lg bg-transparent border-neutral-700"
+                        />
+                        <input
+                          type="text"
+                          value={siteConfig.themeAccentColor || '#f97316'}
+                          onChange={(e) => setSiteConfig({ ...siteConfig, themeAccentColor: e.target.value })}
+                          placeholder="#f97316"
+                          maxLength={7}
+                          className={`flex-grow p-2 rounded-lg border focus:outline-none font-mono text-center font-bold text-xs ${
+                            isDark ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-250 text-neutral-805'
+                          }`}
+                        />
+                      </div>
+                      <p className="text-[10px] text-neutral-400">স্পেশাল প্রোডাক্ট অফার ব্যাজ, ছাড়ে বিক্রিত প্রাইস হাইলাইট এবং গুরুত্বপূর্ণ অর্নিং মেসেজে এই কালার ব্যবহার হবে।</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveSubSection('ব্র্যান্ড থিম কালার')}
+                      disabled={savingSettings}
+                      className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 hover:brightness-110 text-white font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all font-sans shadow-md"
+                    >
+                      <Check size={14} />
+                      <span>থিম কালার আপডেট করুন</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+
+              {/* SECTION 3: NICE HEADLINES & BRANDING TEXTS */}
+              <div className={`p-6 rounded-2xl border ${
+                isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-150 shadow-sm'
+              }`}>
+                <div className="border-b pb-3 mb-4 dark:border-neutral-800 border-neutral-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-sm text-emerald-500">সেকশন ৩: গ্লোবাল হেডিংস ও নায়েস টেক্সট সেটিংস (NICE Headlines & Text Customizer)</h3>
+                    <p className="text-[11px] text-neutral-400">ক্যাটালগ সেকশন এবং ব্র্যান্ডের মূল বিবরণীর টাইটেল ও সাব-টাইটেলসমূহ কাস্টমাইজ করুন।</p>
+                  </div>
+                  <span className="p-1 px-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold font-sans text-[10px]">SECTION 3</span>
+                </div>
+
+                <div className="space-y-4 text-xs sm:text-sm">
+                  {/* Arrivals Subtitle (Badge) */}
                   <div className="space-y-1">
-                    <label className="text-xs text-neutral-400 font-bold font-sans">হটলাইন সাপোর্ট নাম্বার *</label>
+                    <label className="text-xs text-neutral-400 font-bold">ক্যাটালগ সাব-টাইটেল ব্যাজ (যেমন- LATEST ARRIVALS)</label>
                     <input
                       type="text"
                       required
-                      value={siteConfig.hotlineNumber || '01811122233'}
-                      onChange={(e) => setSiteConfig({ ...siteConfig, hotlineNumber: e.target.value })}
-                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-semibold ${
+                      value={siteConfig.arrivalsSubtitle || ''}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, arrivalsSubtitle: e.target.value })}
+                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-semibold ${
                         isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
                       }`}
                     />
                   </div>
-                </div>
 
-                <div className="pt-2 flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={savingSettings}
-                    className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 hover:brightness-110 text-white font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all font-sans"
-                  >
-                    {savingSettings ? (
-                      <span>সংরক্ষণ হচ্ছে...</span>
-                    ) : (
-                      <>
-                        <Check size={14} />
-                        <span>ওয়েবসাইট সব সেটিংস আপডেট করুন</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                  {/* Arrivals Title (Heading) */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-neutral-400 font-bold">ক্যাটালগ সেকশন হেডলাইন (অনন্য কালেকশন টাইটেল) *</label>
+                    <input
+                      type="text"
+                      required
+                      value={siteConfig.arrivalsTitle || ''}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, arrivalsTitle: e.target.value })}
+                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-semibold ${
+                        isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                      }`}
+                    />
+                  </div>
 
-              </form>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Brand Story Subtitle */}
+                    <div className="space-y-1">
+                      <label className="text-xs text-neutral-400 font-bold">ব্র্যান্ড স্টোরি সাব-টাইটেল (যেমন- Our Craftsmanship)</label>
+                      <input
+                        type="text"
+                        required
+                        value={siteConfig.brandStorySubtitle || ''}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, brandStorySubtitle: e.target.value })}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-semibold ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Brand Story Title */}
+                    <div className="space-y-1">
+                      <label className="text-xs text-neutral-400 font-bold">ব্র্যান্ড স্টোরি সেকশন হেডিং কাস্টমাইজার *</label>
+                      <input
+                        type="text"
+                        required
+                        value={siteConfig.brandStoryTitle || ''}
+                        onChange={(e) => setSiteConfig({ ...siteConfig, brandStoryTitle: e.target.value })}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-semibold ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Brand Story Description Paragraph */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-neutral-400 font-bold">ব্র্যান্ডের মূল বিবরণী দীর্ঘ কন্টেন্ট প্যারাগ্রাফ (Paragraph Stories) *</label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={siteConfig.brandStoryDescription || ''}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, brandStoryDescription: e.target.value })}
+                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 leading-relaxed ${
+                        isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveSubSection('হেডিংস ও নায়েস টেক্সট সেটিংস')}
+                      disabled={savingSettings}
+                      className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 hover:brightness-110 text-white font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all font-sans shadow-md"
+                    >
+                      <Check size={14} />
+                      <span>হেডিংস ও নায়েস টেক্সট আপডেট করুন</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+
             </div>
           </div>
         )}
@@ -2178,6 +2439,96 @@ VALUES (
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* TAB 10: REGISTERED CUSTOMERS LIST */}
+        {activeTab === 'customers' && (
+          <div className="space-y-6" id="customers-tab-panel">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg sm:text-xl font-extrabold font-sans text-neutral-850 dark:text-white">নিবন্ধিত কাস্টমারবৃন্দ (Customers Database)</h2>
+                <p className="text-xs text-neutral-400 mt-1">ওয়েবসাইটে নিবন্ধিত সব সাধারণ গ্রাহকের তালিকা ও ডিটেইলস।</p>
+              </div>
+              <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-405 font-bold p-1.5 px-3.5 rounded-xl text-xs font-sans">
+                মোট কাস্টমারঃ {registeredUsers.length} জন
+              </div>
+            </div>
+
+            <div className={`overflow-x-auto rounded-2xl border ${
+              isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-100 shadow-sm'
+            }`} id="customers-list-table">
+              {registeredUsers.length === 0 ? (
+                <div className="p-12 text-center text-neutral-400 text-xs">
+                  কোনো নিবন্ধিত কাস্টমার অ্যাকাউন্ট পাওয়া যায়নি!
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b dark:border-neutral-800 text-neutral-400 bg-neutral-500/5 uppercase font-bold">
+                      <th className="p-4">কাস্টমার আইডি</th>
+                      <th className="p-4">নাম (Name)</th>
+                      <th className="p-4 font-sans">জি-মেইল (Email)</th>
+                      <th className="p-4 font-sans">মোবাইল নাম্বার</th>
+                      <th className="p-4">নিবন্ধন তারিখ</th>
+                      <th className="p-4 text-center">অ্যাকশন</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-neutral-850 divide-neutral-100">
+                    {registeredUsers.map((usr: any) => (
+                      <tr key={usr.uid || usr.id} className="hover:bg-neutral-500/5 transition-colors">
+                        <td className="p-4 font-mono text-[10px] text-neutral-400">{usr.uid || usr.id || 'N/A'}</td>
+                        <td className="p-4 font-bold text-neutral-850 dark:text-white">{usr.displayName || 'Unnamed User'}</td>
+                        <td className="p-4 font-semibold text-emerald-500 font-sans">{usr.email}</td>
+                        <td className="p-4 font-sans font-medium">{usr.phoneNumber || 'N/A'}</td>
+                        <td className="p-4 text-neutral-405 dark:text-neutral-500 font-sans">
+                          {usr.createdAt ? new Date(usr.createdAt).toLocaleDateString('bn-BD') : 'N/A'}
+                        </td>
+                        <td className="p-4 text-center">
+                          <button
+                            onClick={async () => {
+                              if (confirm('আপনি কি নিশ্চিত যে এই কাস্টমার অ্যাকাউন্টটি চিরতরে ডিলিট করতে চান?')) {
+                                try {
+                                  // We can delete the user from localized and Supabase
+                                  const localUsers = JSON.parse(localStorage.getItem('__db_users_v2__') || '[]');
+                                  const filtered = localUsers.filter((u: any) => (u.uid || u.id) !== (usr.uid || usr.id));
+                                  localStorage.setItem('__db_users_v2__', JSON.stringify(filtered));
+                                  
+                                  const isSupActive = DB.isSupabaseConnected();
+                                  if (isSupActive) {
+                                    // Make direct reference to DB custom deletion if they want
+                                    const storedConfig = localStorage.getItem('__SUPABASE_DB_CONFIG__');
+                                    let url = import.meta.env.VITE_SUPABASE_URL || 'https://ujhrwtituovlhcojichc.supabase.co';
+                                    let key = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqaHJ3dGl0dW92bGhjb2ppY2hjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDMyODIsImV4cCI6MjA5NzM3OTI4Mn0.cKftW_7loHoENaibeEczuIbNGm5KfiqAbxIBgT9ajpo';
+                                    if (storedConfig) {
+                                      const p = JSON.parse(storedConfig);
+                                      url = p.url;
+                                      key = p.key;
+                                    }
+                                    const { createClient } = await import('@supabase/supabase-js');
+                                    const client = createClient(url, key);
+                                    await client.from('users').delete().eq('id', usr.uid || usr.id);
+                                  }
+                                  
+                                  setRegisteredUsers(registeredUsers.filter(u => (u.uid || u.id) !== (usr.uid || usr.id)));
+                                  alert('সফলভাবে কাস্টমার অ্যাকাউন্টটি ডিলিট করা হয়েছে!');
+                                } catch (err) {
+                                  alert('মুছে ফেলার সময় সমস্যা হয়েছে!');
+                                }
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-red-500 hover:bg-neutral-500/10 cursor-pointer"
+                            title="কাস্টমার মুছে ফেলুন"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         )}
 

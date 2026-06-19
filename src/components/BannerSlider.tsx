@@ -53,65 +53,17 @@ export default function BannerSlider({ banners, onActionClick, theme }: BannerSl
             transition={{ duration: 0.5 }}
             className="absolute inset-0 w-full h-full"
           >
-            {/* Background Image / Overlay Gradients */}
-            <img
-              src={banners[current].imageUrl}
-              alt={banners[current].title}
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover transition-transform duration-700 hover:scale-102"
-            />
-            {/* Dual Gradients for optimal layout visibility and high-contrast texts */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-
-            {/* Campaign Rich Contents */}
-            <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-16 lg:px-24 text-white max-w-xl md:max-w-2xl space-y-2 md:space-y-4">
-              {banners[current].badge && (
-                <motion.span
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="inline-block self-start text-[10px] md:text-xs font-semibold px-2.5 py-1 bg-gradient-to-r from-emerald-500 to-green-400 rounded-full text-white uppercase tracking-wider shadow-md shadow-emerald-950/40"
-                >
-                  {banners[current].badge}
-                </motion.span>
-              )}
-
-              <motion.h2
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-lg sm:text-2xl md:text-4xl lg:text-5xl font-sans font-bold tracking-tight leading-tight text-white"
-              >
-                {banners[current].title}
-              </motion.h2>
-
-              {banners[current].subtitle && (
-                <motion.p
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-xs sm:text-sm md:text-base lg:text-lg text-neutral-200 font-sans font-light leading-relaxed max-w-lg hidden sm:line-clamp-2 md:line-clamp-none"
-                >
-                  {banners[current].subtitle}
-                </motion.p>
-              )}
-
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="pt-2 md:pt-4"
-              >
-                <button
-                  id={`banner-action-btn-${current}`}
-                  onClick={handleAction}
-                  className="group py-2 px-4 md:py-3 md:px-6 rounded-xl text-white text-xs md:text-sm font-medium bg-gradient-to-r from-emerald-500 to-green-500 hover:brightness-110 shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center gap-2 cursor-pointer transition-all"
-                >
-                  <span>Claim Offer</span>
-                  <ShoppingBag size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              </motion.div>
+            {/* Background Image / Complete Full-bleeding Image - Clickable for promotion */}
+            <div 
+              onClick={handleAction} 
+              className="w-full h-full cursor-pointer relative group overflow-hidden"
+            >
+              <img
+                src={banners[current].imageUrl}
+                alt={banners[current].title || 'Chrono & Shade Banner'}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-103"
+              />
             </div>
           </motion.div>
         </AnimatePresence>

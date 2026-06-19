@@ -123,4 +123,11 @@ export interface LandingConfig {
   promoTexts: string[];
   deliveryChargeInsideDhaka?: number;
   deliveryChargeOutsideDhaka?: number;
+  arrivalsTitle?: string;
+  arrivalsSubtitle?: string;
+  brandStoryTitle?: string;
+  brandStorySubtitle?: string;
+  brandStoryDescription?: string;
+  themePrimaryColor?: string; // Emerald default e.g. '#10b981'
+  themeAccentColor?: string; // Secondary badge accent, e.g. '#f97316'
 }

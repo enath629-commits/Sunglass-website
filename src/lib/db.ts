@@ -187,7 +187,14 @@ const INITIAL_LANDING_CONFIG: LandingConfig = {
     '📦 ক্যাশ অন ডেলিভারি (হাতে পণ্য পেয়ে মূল্য পরিশোধ করার সুযোগ)!'
   ],
   deliveryChargeInsideDhaka: 80,
-  deliveryChargeOutsideDhaka: 120
+  deliveryChargeOutsideDhaka: 120,
+  arrivalsTitle: 'Exclusive Handpicked Designs',
+  arrivalsSubtitle: 'LATEST ARRIVALS',
+  brandStoryTitle: 'CHRONO & SHADE - Premium Lifestyle Partner',
+  brandStorySubtitle: 'Our Craftsmanship',
+  brandStoryDescription: 'We believe watches and sunglasses are not merely accessories, but assertions of status and personality. Every chronograph watch and polarized lens is meticulously evaluated by our multi-tier Quality Assurance team. Direct distribution allows us to offer premium products, luxury feels, and flawless utility at unmatched wholesale pricing in the region.',
+  themePrimaryColor: '#10b981',
+  themeAccentColor: '#f97316'
 };
 
 const INITIAL_ADMINS: AdminPermission[] = [
@@ -380,7 +387,8 @@ const KEYS = {
   ADMINS: '__db_admins_v1__',
   ORDERS: '__db_orders_v1__',
   MESSAGES: '__db_chat_messages_v1__',
-  NOTIFICATIONS: '__db_cart_notifications_v1__'
+  NOTIFICATIONS: '__db_cart_notifications_v1__',
+  USERS: '__db_users_v2__'
 };
 
 // Initialize State
@@ -393,6 +401,16 @@ export const initLocalDatabase = () => {
   getLocalStore(KEYS.ORDERS, INITIAL_ORDERS);
   getLocalStore(KEYS.MESSAGES, INITIAL_MESSAGES);
   getLocalStore(KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS);
+  getLocalStore(KEYS.USERS, [
+    {
+      uid: 'admin-enath',
+      email: 'enath629@gmail.com',
+      password: 'adminpassword',
+      displayName: 'Admin Enath',
+      phoneNumber: '01811122233',
+      createdAt: new Date().toISOString()
+    }
+  ]);
 };
 
 initLocalDatabase();
@@ -858,6 +876,65 @@ export const DB = {
     return newNotif;
   },
 
+  // USER AUTH SYSTEM
+  getUsers: async (): Promise<any[]> => {
+    if (isSupabaseActive && supabase) {
+      try {
+        const { data, error } = await supabase.from('users').select('*');
+        if (!error && data) return data;
+        console.warn('Supabase users fetch failed, falling back to LocalDB', error);
+      } catch (err) {
+        console.warn('Supabase users fetch failed, falling back to LocalDB', err);
+      }
+    }
+    return getLocalStore<any[]>(KEYS.USERS, []);
+  },
+
+  registerUser: async (user: any): Promise<{ success: boolean; error?: string }> => {
+    const emailLower = user.email.toLowerCase();
+    const allUsers = await DB.getUsers();
+
+    // Check if email already registered
+    if (allUsers.some((u: any) => u.email.toLowerCase() === emailLower)) {
+      return { success: false, error: 'এই ইমেইল ঠিকানা দিয়ে ইতিপূর্বে অ্যাকাউন্ট খোলা হয়েছে!' };
+    }
+
+    // Save to local list
+    const local = getLocalStore<any[]>(KEYS.USERS, []);
+    local.push(user);
+    setLocalStore(KEYS.USERS, local);
+
+    // Save to Supabase if active
+    if (isSupabaseActive && supabase) {
+      try {
+        const { error } = await supabase.from('users').insert(user);
+        if (error) {
+          console.error('Supabase user registration failed', error);
+        }
+      } catch (err) {
+        console.error('Supabase user registration failed exception', err);
+      }
+    }
+
+    return { success: true };
+  },
+
+  verifyUser: async (email: string, password: string): Promise<any | null> => {
+    const emailLower = email.toLowerCase();
+    const all = await DB.getUsers();
+    
+    const matched = all.find(
+      (u: any) => u.email.toLowerCase() === emailLower && u.password === password
+    );
+
+    if (matched) {
+      // return clear user without exposing password field
+      const { password: _, ...clean } = matched;
+      return clean;
+    }
+    return null;
+  },
+
   // Clean DB back to default setup if wanted
   resetToDefaults: () => {
     setLocalStore(KEYS.PRODUCTS, INITIAL_PRODUCTS);
@@ -868,6 +945,16 @@ export const DB = {
     setLocalStore(KEYS.ORDERS, INITIAL_ORDERS);
     setLocalStore(KEYS.MESSAGES, INITIAL_MESSAGES);
     setLocalStore(KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS);
+    setLocalStore(KEYS.USERS, [
+      {
+        uid: 'admin-enath',
+        email: 'enath629@gmail.com',
+        password: 'adminpassword',
+        displayName: 'Admin Enath',
+        phoneNumber: '01811122233',
+        createdAt: new Date().toISOString()
+      }
+    ]);
     loadSupabaseClient();
   }
 };
