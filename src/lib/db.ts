@@ -883,8 +883,22 @@ export const DB = {
       try {
         const { data, error } = await supabase.from('users').select('*');
         if (!error && data) {
+          const normalizedData = data.map((u: any) => {
+            const dispName = u.displayName !== undefined ? u.displayName : (u.displayname !== undefined ? u.displayname : (u.displayName || u.name || ''));
+            const phoneNum = u.phoneNumber !== undefined ? u.phoneNumber : (u.phonenumber !== undefined ? u.phonenumber : (u.phoneNumber || u.phone || ''));
+            const created = u.createdAt !== undefined ? u.createdAt : (u.createdat !== undefined ? u.createdat : (u.createdAt || new Date().toISOString()));
+            return {
+              ...u,
+              displayName: dispName,
+              phoneNumber: phoneNum,
+              createdAt: created,
+              uid: u.uid || u.id,
+              id: u.id || u.uid
+            };
+          });
+
           // Merge local storage users with Supabase users, removing duplicates by email
-          const merged = [...data];
+          const merged = [...normalizedData];
           local.forEach((lu: any) => {
             const exists = merged.some(
               (su: any) => su.email?.toLowerCase() === lu.email?.toLowerCase()
@@ -909,19 +923,22 @@ export const DB = {
 
     // Check if email already registered (with exception to the default initial admin/placeholder)
     const existingIndex = allUsers.findIndex((u: any) => u.email.toLowerCase() === emailLower);
+    let existingId: string | null = null;
     if (existingIndex >= 0) {
       const existing = allUsers[existingIndex];
       const isPlaceholder = existing.password === 'adminpassword' || existing.uid === 'admin-enath' || existing.email === 'enath629@gmail.com';
       if (!isPlaceholder) {
         return { success: false, error: 'এই ইমেইল ঠিকানা দিয়ে ইতিপূর্বে অ্যাকাউন্ট খোলা হয়েছে!' };
       }
+      existingId = existing.id || existing.uid;
     }
 
     // Prepare complete user record with both uid and id populated to prevent schema mismatch
+    const finalId = existingId || user.id || user.uid || 'usr-' + Math.random().toString(36).substring(2, 9);
     const augmentedUser = {
       ...user,
-      id: user.id || user.uid || 'usr-' + Math.random().toString(36).substring(2, 9),
-      uid: user.uid || user.id || 'usr-' + Math.random().toString(36).substring(2, 9)
+      id: finalId,
+      uid: finalId
     };
 
     // Save to local list, filtering out any placeholder record with the same email
@@ -933,8 +950,7 @@ export const DB = {
     // Save to Supabase if active
     if (isSupabaseActive && supabase) {
       try {
-        // Build clean insert payload containing exactly the columns present in the SQL table schema (no uid column)
-        const payload = {
+        const camelPayload = {
           id: augmentedUser.id,
           email: augmentedUser.email,
           password: augmentedUser.password,
@@ -942,11 +958,25 @@ export const DB = {
           phoneNumber: augmentedUser.phoneNumber,
           createdAt: augmentedUser.createdAt
         };
-        
-        // Use upsert to handle both new inserting & updating if a placeholder with that email exists
-        const { error } = await supabase.from('users').upsert(payload);
+
+        const lowerPayload = {
+          id: augmentedUser.id,
+          email: augmentedUser.email,
+          password: augmentedUser.password,
+          displayname: augmentedUser.displayName,
+          phonenumber: augmentedUser.phoneNumber,
+          createdat: augmentedUser.createdAt
+        };
+
+        // Try camelCase first
+        let { error } = await supabase.from('users').upsert(camelPayload);
         if (error) {
-          console.error('Supabase user registration failed', error);
+          console.warn('Supabase user registration with camelCase fields failed, trying lowercase fields...', error.message);
+          // Fallback to lowercase columns
+          const { error: lowerErr } = await supabase.from('users').upsert(lowerPayload);
+          if (lowerErr) {
+            console.error('Supabase user registration with both uppercase and lowercase fields failed:', lowerErr.message);
+          }
         }
       } catch (err) {
         console.error('Supabase user registration failed exception', err);
