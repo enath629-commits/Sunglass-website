@@ -17,14 +17,16 @@ interface CartDrawerProps {
   onTriggerAuth: () => void;
   onClearCart: () => void;
   theme: 'light' | 'dark';
+  config?: any;
 }
 
 export default function CartDrawer({
   isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, 
-  currentUser, onTriggerAuth, onClearCart, theme 
+  currentUser, onTriggerAuth, onClearCart, theme, config
 }: CartDrawerProps) {
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
   const [shippingAddress, setShippingAddress] = useState('');
+  const [deliveryLocation, setDeliveryLocation] = useState<'inside' | 'outside'>('outside');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('cod');
   const [paymentNumber, setPaymentNumber] = useState('');
   const [transactionId, setTransactionId] = useState('');
@@ -41,7 +43,29 @@ export default function CartDrawer({
     }
   }, [currentUser]);
 
-  const grandTotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const insideDhakaCharge = config?.deliveryChargeInsideDhaka !== undefined ? Number(config.deliveryChargeInsideDhaka) : 80;
+  const outsideDhakaCharge = config?.deliveryChargeOutsideDhaka !== undefined ? Number(config.deliveryChargeOutsideDhaka) : 120;
+  const deliveryCharge = deliveryLocation === 'inside' ? insideDhakaCharge : outsideDhakaCharge;
+
+  const itemsTotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const grandTotal = itemsTotal + deliveryCharge;
+
+  const handleAddressChange = (addressText: string) => {
+    setShippingAddress(addressText);
+    const lowerText = addressText.toLowerCase();
+    const insideKeywords = [
+      'dhaka', 'daka', 'ঢাকা', 'উত্তরা', 'uttara', 'মিরপুর', 'mirpur', 'ধানমন্ডি', 'dhanmondi',
+      'গুলশান', 'gulshan', 'বনানী', 'banani', 'খিলগাঁও', 'khilgaon', 'মতিঝিল', 'motijheel',
+      'মোহাম্মদপুর', 'mohammadpur', 'যাত্রাবাড়ী', 'যাত্রাবাড়ি', 'jatrabari', 'বাড্ডা', 'badda',
+      'তেজগাঁও', 'tejgaon', 'রমনা', 'ramna', 'শাহবাগ', 'shahbag', 'পল্টন', 'paltan', 'খিলক্ষেত', 'khilkhet'
+    ];
+    const isInsideDhaka = insideKeywords.some(keyword => lowerText.includes(keyword));
+    if (isInsideDhaka) {
+      setDeliveryLocation('inside');
+    } else {
+      setDeliveryLocation('outside');
+    }
+  };
 
   const handleCheckoutSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,16 +232,62 @@ export default function CartDrawer({
                             isDark ? 'bg-neutral-805 border-neutral-700 text-white focus:border-emerald-500' : 'bg-neutral-50 border-neutral-200 text-neutral-805 focus:border-emerald-600'
                           }`}
                         />
-                        <textarea
-                          required
-                          rows={2}
-                          value={shippingAddress}
-                          onChange={(e) => setShippingAddress(e.target.value)}
-                          placeholder="Full Shipping Address (House, Road, Area, City) *"
-                          className={`w-full p-2.5 rounded-xl text-xs border focus:outline-none focus:bg-white transition-all ${
-                            isDark ? 'bg-neutral-805 border-neutral-700 text-white focus:border-emerald-500' : 'bg-neutral-50 border-neutral-200 text-neutral-805 focus:border-emerald-600'
-                          }`}
-                        />
+                        <div className="space-y-2">
+                          <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                            Full Delivery Address * (লোকেশন অনুযায়ী ডেলিভারি চার্জ অটো সেট হবে)
+                          </label>
+                          <textarea
+                            required
+                            rows={3}
+                            value={shippingAddress}
+                            onChange={(e) => handleAddressChange(e.target.value)}
+                            placeholder="ঠিকানাঃ বাড়ি নং, রোড নং, এলাকা এবং জেলা লিখুন... (যেমন: মিরপুর ২, ঢাকা) *"
+                            className={`w-full p-3 rounded-xl text-sm font-semibold border-2 focus:outline-none transition-all ${
+                              isDark 
+                                ? 'bg-neutral-900 border-neutral-750 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25 placeholder-neutral-500' 
+                                : 'bg-white border-neutral-300 text-neutral-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/10 placeholder-neutral-400'
+                            }`}
+                            id="shipping-address-input-bold"
+                          />
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                            <span>💡 প্রো-টিপঃ</span>
+                            <span>আপনার ঠিকানায় 'ঢাকা' বা 'Dhaka' থাকলে অটো ঢাকার ভেতরে (৳{insideDhakaCharge}) চার্জ হবে, অন্যথায় ঢাকার বাইরে (৳{outsideDhakaCharge}) সেট হবে।</span>
+                          </p>
+                        </div>
+
+                        {/* Manual override buttons layout */}
+                        <div className="space-y-1.5 pt-1">
+                          <span className="block text-[11px] font-bold text-neutral-400 uppercase">
+                            ডেলিভারি এরিয়াঃ (ম্যানুয়ালি নির্বাচনও করতে পারবেন)
+                          </span>
+                          <div className="grid grid-cols-2 gap-2" id="delivery-location-override-grid">
+                            <button
+                              type="button"
+                              onClick={() => setDeliveryLocation('inside')}
+                              className={`p-2.5 rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+                                deliveryLocation === 'inside'
+                                  ? 'border-emerald-500 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 font-extrabold ring-1 ring-emerald-500/20'
+                                  : isDark ? 'border-neutral-800 bg-neutral-850 text-neutral-400 hover:bg-neutral-800' : 'border-neutral-200 bg-white text-neutral-510 hover:bg-neutral-50'
+                              }`}
+                            >
+                              <span className="text-[10px] font-sans">Inside Dhaka</span>
+                              <span className="text-xs font-bold font-sans">৳{insideDhakaCharge}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setDeliveryLocation('outside')}
+                              className={`p-2.5 rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+                                deliveryLocation === 'outside'
+                                  ? 'border-emerald-500 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 font-extrabold ring-1 ring-emerald-500/20'
+                                  : isDark ? 'border-neutral-800 bg-neutral-850 text-neutral-400 hover:bg-neutral-800' : 'border-neutral-200 bg-white text-neutral-510 hover:bg-neutral-50'
+                              }`}
+                            >
+                              <span className="text-[10px] font-sans">Outside Dhaka</span>
+                              <span className="text-xs font-bold font-sans">৳{outsideDhakaCharge}</span>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>                    {/* Payment methods list */}
                     <div className="space-y-3 pt-2">
@@ -228,16 +298,17 @@ export default function CartDrawer({
                           type="button"
                           id="pay-method-cod"
                           onClick={() => setPaymentMethod('cod')}
-                          className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all text-xs font-semibold cursor-pointer ${
+                          className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all text-xs font-bold cursor-pointer ${
                             paymentMethod === 'cod' 
-                              ? 'border-emerald-500 bg-emerald-505/5 text-emerald-550 dark:text-emerald-400 ring-1 ring-emerald-500' 
+                              ? 'border-emerald-500 bg-emerald-505/5 text-emerald-550 dark:text-emerald-400 ring-2 ring-emerald-500/20' 
                               : isDark ? 'border-neutral-800 bg-neutral-850 hover:bg-neutral-800' : 'border-neutral-200 bg-white hover:bg-neutral-50'
                           }`}
                         >
-                          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="2" y="5" width="20" height="14" rx="2" />
-                            <line x1="2" y1="10" x2="22" y2="10" />
-                          </svg>
+                          <img 
+                            src="https://i.postimg.cc/hGgRC643/OIP-removebg-preview.png" 
+                            alt="Cash on Delivery" 
+                            className="h-7 object-contain rounded-md"
+                          />
                           <span>Cash on Delivery</span>
                         </button>
 
@@ -245,13 +316,17 @@ export default function CartDrawer({
                           type="button"
                           id="pay-method-bkash"
                           onClick={() => setPaymentMethod('bkash')}
-                          className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all text-xs font-semibold cursor-pointer ${
+                          className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all text-xs font-bold cursor-pointer ${
                             paymentMethod === 'bkash' 
-                              ? 'border-pink-500 bg-pink-500/5 text-pink-505 ring-1 ring-pink-500' 
+                              ? 'border-pink-500 bg-pink-500/5 text-pink-505 ring-2 ring-pink-500/20' 
                               : isDark ? 'border-neutral-800 bg-neutral-850 hover:bg-neutral-800' : 'border-neutral-200 bg-white hover:bg-neutral-50'
                           }`}
                         >
-                          <span className="w-5 h-5 bg-pink-550 text-white flex items-center justify-center rounded-full text-[9px] font-sans font-black">bK</span>
+                          <img 
+                            src="https://i.postimg.cc/xTCC5kpP/download-removebg-preview.png" 
+                            alt="bKash" 
+                            className="h-7 object-contain rounded-md"
+                          />
                           <span>bKash Wallet</span>
                         </button>
 
@@ -259,13 +334,17 @@ export default function CartDrawer({
                           type="button"
                           id="pay-method-nagad"
                           onClick={() => setPaymentMethod('nagad')}
-                          className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all text-xs font-semibold cursor-pointer ${
+                          className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all text-xs font-bold cursor-pointer ${
                             paymentMethod === 'nagad' 
-                              ? 'border-orange-500 bg-orange-500/5 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500' 
+                              ? 'border-orange-500 bg-orange-500/5 text-orange-600 dark:text-orange-400 ring-2 ring-orange-500/20' 
                               : isDark ? 'border-neutral-800 bg-neutral-850 hover:bg-neutral-800' : 'border-neutral-200 bg-white hover:bg-neutral-50'
                           }`}
                         >
-                          <span className="w-5 h-5 bg-orange-555 text-white flex items-center justify-center rounded-full text-[9px] font-sans font-black">N</span>
+                          <img 
+                            src="https://i.postimg.cc/Gp0mbXL6/download-removebg-preview-(1).png" 
+                            alt="Nagad" 
+                            className="h-7 object-contain rounded-md"
+                          />
                           <span>Nagad Wallet</span>
                         </button>
 
@@ -273,13 +352,17 @@ export default function CartDrawer({
                           type="button"
                           id="pay-method-rocket"
                           onClick={() => setPaymentMethod('rocket')}
-                          className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all text-xs font-semibold cursor-pointer ${
+                          className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all text-xs font-bold cursor-pointer ${
                             paymentMethod === 'rocket' 
-                              ? 'border-purple-500 bg-purple-500/5 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500' 
+                              ? 'border-purple-500 bg-purple-500/5 text-purple-600 dark:text-purple-400 ring-2 ring-purple-500/20' 
                               : isDark ? 'border-neutral-800 bg-neutral-850 hover:bg-neutral-800' : 'border-neutral-200 bg-white hover:bg-neutral-50'
                           }`}
                         >
-                          <span className="w-5 h-5 bg-purple-655 text-white flex items-center justify-center rounded-full text-[9px] font-sans font-black font-semibold">R</span>
+                          <img 
+                            src="https://i.postimg.cc/W4PTBt8Z/image-removebg-preview-(10).png" 
+                            alt="Rocket" 
+                            className="h-7 object-contain rounded-md"
+                          />
                           <span>Rocket Wallet</span>
                         </button>
                       </div>
@@ -334,10 +417,21 @@ export default function CartDrawer({
                   </div>
 
                   {/* Place Order bottom action */}
-                  <div className={`p-5 border-t space-y-3 bg-neutral-500/5 ${isDark ? 'border-neutral-800' : 'border-neutral-105'}`} id="checkout-action-footer">
-                    <div className="flex justify-between items-baseline">
-                      <span className="text-xs text-neutral-400">Total Payable Amount & Fee:</span>
-                      <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-sans">৳{grandTotal.toLocaleString('en-US')}</span>
+                  <div className={`p-5 border-t space-y-4 bg-neutral-500/5 ${isDark ? 'border-neutral-800' : 'border-neutral-105'}`} id="checkout-action-footer">
+                    <div className="space-y-1.5 text-xs text-neutral-450 dark:text-neutral-400">
+                      <div className="flex justify-between">
+                        <span>পণ্যের মোট মূল্য (Subtotal):</span>
+                        <span className="font-semibold font-sans">৳{itemsTotal.toLocaleString('en-US')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>ডেলিভারি চার্জ ({deliveryLocation === 'inside' ? 'ঢাকার ভেতরে' : 'ঢাকার বাইরে'}):</span>
+                        <span className="font-semibold font-sans text-emerald-550 dark:text-emerald-400">৳{deliveryCharge.toLocaleString('en-US')}</span>
+                      </div>
+                      <div className={`border-t my-1 ${isDark ? 'border-neutral-800' : 'border-neutral-200'}`} />
+                      <div className="flex justify-between items-baseline pt-0.5">
+                        <span className={`font-bold ${isDark ? 'text-white' : 'text-neutral-800'}`}>সর্বমোট (Grand Total):</span>
+                        <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-sans">৳{grandTotal.toLocaleString('en-US')}</span>
+                      </div>
                     </div>
 
                     <button
@@ -424,8 +518,8 @@ export default function CartDrawer({
                       {/* Footer & Checkout actions */}
                       <div className={`p-5 border-t space-y-4 bg-neutral-500/5 ${isDark ? 'border-neutral-800' : 'border-neutral-105'}`} id="cart-footer-actions">
                         <div className="flex justify-between items-baseline">
-                          <span className="text-xs text-neutral-400">Subtotal (Free Delivery):</span>
-                          <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-sans">৳{grandTotal.toLocaleString('en-US')}</span>
+                          <span className="text-xs text-neutral-400">Subtotal (পণ্যের মোট মূল্য):</span>
+                          <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-sans">৳{itemsTotal.toLocaleString('en-US')}</span>
                         </div>
 
                         {currentUser ? (

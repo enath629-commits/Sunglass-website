@@ -22,7 +22,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelProps) {
   // Navigation Tabs
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'chats' | 'banners' | 'admins' | 'database'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'chats' | 'banners' | 'admins' | 'database' | 'reviews' | 'settings'>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Core Lists States
@@ -41,6 +41,23 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
   const [sbUrl, setSbUrl] = useState('');
   const [sbKey, setSbKey] = useState('');
   const [dbSaveSuccess, setDbSaveSuccess] = useState('');
+
+  // Website Settings Configuration States
+  const [siteConfig, setSiteConfig] = useState<any>({
+    logoText: 'CHRONO & SHADE',
+    whatsappNumber: '+8801811122233',
+    hotlineNumber: '01811122233',
+    deliveryChargeInsideDhaka: 80,
+    deliveryChargeOutsideDhaka: 120
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  // Reviews Control States
+  const [systemReviews, setSystemReviews] = useState<any[]>([]);
+  const [editingReview, setEditingReview] = useState<any | null>(null);
+  const [revAuthor, setRevAuthor] = useState('');
+  const [revRating, setRevRating] = useState(5);
+  const [revComment, setRevComment] = useState('');
 
   // Forms / Modals States
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
@@ -98,6 +115,24 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
 
     const sess = await DB.getChatSessions();
     setSessions(sess);
+
+    // Fetch review data
+    try {
+      const revs = await DB.getReviews();
+      setSystemReviews(revs);
+    } catch (e) {
+      console.error('Failed to sync reviews', e);
+    }
+
+    // Fetch configuration
+    try {
+      const dbConfig = await DB.getConfig();
+      if (dbConfig) {
+        setSiteConfig(dbConfig);
+      }
+    } catch (e) {
+      console.error('Failed to sync config', e);
+    }
 
     // Filter local active admin permissions
     const activePerm = adms.find(a => a.email.toLowerCase() === adminEmail.toLowerCase());
@@ -362,6 +397,19 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
     setTimeout(() => setDbSaveSuccess(''), 4000);
   };
 
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    const ok = await DB.saveConfig(siteConfig);
+    if (ok) {
+      alert('সফলভাবে সমস্ত ওয়েবসাইট সেটিংস সেভ করা হয়েছে!');
+      syncAllData();
+    } else {
+      alert('সেটিংস সেভ করতে কোনো সমস্যা হয়েছে।');
+    }
+    setSavingSettings(false);
+  };
+
   const isDark = theme === 'dark';
 
   return (
@@ -501,6 +549,30 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
           >
             <Database size={16} />
             <span>সুপাবেস ডেটাবেস সেটিং</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('reviews'); setMobileMenuOpen(false); }}
+            className={`w-full text-left py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${
+              activeTab === 'reviews' 
+                ? 'bg-gradient-to-r from-emerald-600 to-green-500 text-white font-bold' 
+                : isDark ? 'hover:bg-neutral-800 text-neutral-300' : 'hover:bg-neutral-100 text-neutral-700'
+            }`}
+          >
+            <MessageSquare size={16} />
+            <span>কাস্টমার রিভিউ কন্ট্রোল</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false); }}
+            className={`w-full text-left py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 transition-all cursor-pointer ${
+              activeTab === 'settings' 
+                ? 'bg-gradient-to-r from-emerald-600 to-green-500 text-white font-bold' 
+                : isDark ? 'hover:bg-neutral-800 text-neutral-300' : 'hover:bg-neutral-100 text-neutral-700'
+            }`}
+          >
+            <Settings size={16} />
+            <span>ওয়েবসাইট কাস্টম সেটিংস</span>
           </button>
         </nav>
 
@@ -1808,6 +1880,304 @@ VALUES (
               </div>
 
             </div>
+          </div>
+        )}
+
+        {/* TAB 8: WEBSITE CUSTOM SETTINGS */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6" id="settings-tab-panel">
+            <div>
+              <h2 className="text-lg sm:text-xl font-extrabold font-sans">ওয়েবসাইট সেটিংস ও ডেলিভারি চার্জ কন্ট্রোল</h2>
+              <p className="text-xs text-neutral-400 mt-1">লোগো লেখা, হটলাইন নাম্বার এবং ঢাকার ভেতরে/বাইরে ডেলিভারি চার্জ এখান থেকে এডিট ও সেভ করতে পারবেন।</p>
+            </div>
+
+            <div className="max-w-2xl">
+              <form onSubmit={handleSaveSettings} className={`p-6 rounded-2xl border text-xs sm:text-sm space-y-5 ${
+                isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-100 shadow-sm'
+              }`} id="website-settings-form">
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Delivery Charge Inside Dhaka */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-neutral-400 font-bold font-sans">ঢাকার ভিতরে ডেলিভারি চার্জ (৳) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={siteConfig.deliveryChargeInsideDhaka || 80}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, deliveryChargeInsideDhaka: Number(e.target.value) })}
+                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-bold ${
+                        isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Delivery Charge Outside Dhaka */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-neutral-400 font-bold font-sans">ঢাকার বাইরে ডেলিভারি চার্জ (৳) *</label>
+                    <input
+                      type="number"
+                      required
+                      value={siteConfig.deliveryChargeOutsideDhaka || 120}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, deliveryChargeOutsideDhaka: Number(e.target.value) })}
+                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-bold ${
+                        isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-neutral-400 font-bold">ওয়েবসাইট লোগো টেক্সট (Logo Title)</label>
+                  <input
+                    type="text"
+                    required
+                    value={siteConfig.logoText || 'CHRONO & SHADE'}
+                    onChange={(e) => setSiteConfig({ ...siteConfig, logoText: e.target.value })}
+                    className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-semibold ${
+                      isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                    }`}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Whatsapp Number */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-neutral-400 font-bold font-sans">হোয়াটসঅ্যাপ ব্যবসায়িক নাম্বার *</label>
+                    <input
+                      type="text"
+                      required
+                      value={siteConfig.whatsappNumber || '+8801811122233'}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, whatsappNumber: e.target.value })}
+                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-semibold ${
+                        isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Hotline Number */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-neutral-400 font-bold font-sans">হটলাইন সাপোর্ট নাম্বার *</label>
+                    <input
+                      type="text"
+                      required
+                      value={siteConfig.hotlineNumber || '01811122233'}
+                      onChange={(e) => setSiteConfig({ ...siteConfig, hotlineNumber: e.target.value })}
+                      className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 font-sans font-semibold ${
+                        isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-805'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={savingSettings}
+                    className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 hover:brightness-110 text-white font-bold text-xs flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all font-sans"
+                  >
+                    {savingSettings ? (
+                      <span>সংরক্ষণ হচ্ছে...</span>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        <span>ওয়েবসাইট সব সেটিংস আপডেট করুন</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 9: REVIEWS CONTROL PANEL */}
+        {activeTab === 'reviews' && (
+          <div className="space-y-6" id="reviews-tab-panel">
+            <div className="flex justify-between items-center flex-wrap gap-4">
+              <div>
+                <h2 className="text-lg sm:text-xl font-extrabold font-sans">কাস্টমার রিভিউ কন্ট্রোল ড্যাশবোর্ড</h2>
+                <p className="text-xs text-neutral-400 mt-1">সব প্রোডাক্টের কাস্টমার রিভিউ এখান থেকে এডিট এবং ডিলিট করে কন্ট্রোল করতে পারবেন।</p>
+              </div>
+            </div>
+
+            {/* List Table of reviews */}
+            <div className={`overflow-x-auto rounded-2xl border ${
+              isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-100 shadow-sm'
+            }`} id="reviews-list-table">
+              {systemReviews.length === 0 ? (
+                <div className="p-12 text-center text-neutral-400 text-xs">
+                  কোনো রিভিউ পাওয়া যায়নি!
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b dark:border-neutral-800 text-neutral-400 bg-neutral-500/5 uppercase font-bold">
+                      <th className="p-4">রিভিউ লেখক (User)</th>
+                      <th className="p-4">প্রোডাক্ট</th>
+                      <th className="p-4 font-sans">রেটিং</th>
+                      <th className="p-4">মন্তব্য (Comment)</th>
+                      <th className="p-4">তারিখ</th>
+                      <th className="p-4 text-center">অ্যাকশন</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-neutral-850 divide-neutral-100">
+                    {systemReviews.map((rev: any) => {
+                      const matchedProd = products.find(p => p.id === rev.productId);
+                      return (
+                        <tr key={rev.id} className="hover:bg-neutral-500/5 transition-colors">
+                          <td className="p-4 font-bold">{rev.userName}</td>
+                          <td className="p-4 text-neutral-450 dark:text-neutral-400 font-semibold">{matchedProd ? matchedProd.name : rev.productId}</td>
+                          <td className="p-4">
+                            <span className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-405 font-bold p-1 px-2 rounded-lg text-[10px] font-sans">
+                              ⭐ {rev.rating} / 5
+                            </span>
+                          </td>
+                          <td className="p-4 max-w-sm font-medium">{rev.comment}</td>
+                          <td className="p-4 text-neutral-405 dark:text-neutral-500 font-sans">
+                            {new Date(rev.createdAt).toLocaleDateString('bn-BD')}
+                          </td>
+                          <td className="p-4 text-center">
+                            <div className="flex justify-center items-center gap-1.5">
+                              {/* Edit triggers modal */}
+                              <button
+                                onClick={() => {
+                                  setEditingReview(rev);
+                                  setRevAuthor(rev.userName);
+                                  setRevRating(rev.rating);
+                                  setRevComment(rev.comment);
+                                }}
+                                className="p-1.5 rounded-lg text-blue-500 hover:bg-neutral-500/10 cursor-pointer"
+                                title="রিভিউ এডিট করুন"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              {/* Delete */}
+                              <button
+                                onClick={async () => {
+                                  if (confirm('আপনি কি নিশ্চিত যে এই রিভিউটি ডিলিট করতে চান?')) {
+                                    const ok = await DB.deleteReview(rev.id);
+                                    if (ok) {
+                                      setSystemReviews(systemReviews.filter(r => r.id !== rev.id));
+                                      alert('সফলভাবে রিভিউটি ডিলিট করা হয়েছে!');
+                                    }
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg text-red-500 hover:bg-neutral-500/10 cursor-pointer"
+                                title="রিভিউ মুছে ফেলুন"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* EDIT REVIEW LIGHT MODAL BOX */}
+            {editingReview && (
+              <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+                <div 
+                  className={`w-full max-w-md p-5 rounded-2xl border space-y-4 shadow-xl ${
+                    isDark ? 'bg-neutral-900 border-neutral-800 text-white shadow-black/45' : 'bg-white border-neutral-200 text-neutral-805 shadow-neutral-250/30'
+                  }`}
+                  id="admin-edit-review-modal"
+                >
+                  <div className="flex justify-between items-center pb-2 border-b dark:border-neutral-850 animate-fade-in">
+                    <h3 className="font-extrabold text-sm sm:text-base">গ্রাহক রিভিউ এডিট উইন্ডো</h3>
+                    <button 
+                      onClick={() => setEditingReview(null)}
+                      className="text-neutral-400 hover:text-red-500 transition-colors cursor-pointer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-neutral-450 dark:text-neutral-400 font-bold">লেখক/গ্রাহকের নামঃ</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={revAuthor}
+                        onChange={(e) => setRevAuthor(e.target.value)}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-850'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-neutral-450 dark:text-neutral-400 font-bold font-sans">রেটিং স্টার (১ থেকে ৫):</label>
+                      <select
+                        value={revRating}
+                        onChange={(e) => setRevRating(Number(e.target.value))}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-850'
+                        }`}
+                      >
+                        <option value={5}>⭐⭐⭐⭐⭐ (৫/৫)</option>
+                        <option value={4}>⭐⭐⭐⭐ (৪/৫)</option>
+                        <option value={3}>⭐⭐⭐ (৩/৫)</option>
+                        <option value={2}>⭐⭐ (২/৫)</option>
+                        <option value={1}>⭐ (১/৫)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-neutral-450 dark:text-neutral-400 font-bold">রিভিউ মন্তব্যঃ</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={revComment}
+                        onChange={(e) => setRevComment(e.target.value)}
+                        className={`w-full p-2.5 rounded-xl border focus:outline-none focus:border-emerald-500 ${
+                          isDark ? 'bg-neutral-850 border-neutral-750 text-white' : 'bg-white border-neutral-200 text-neutral-850'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2 text-xs">
+                    <button
+                      onClick={() => setEditingReview(null)}
+                      className="py-2 px-4 rounded-xl bg-neutral-800 text-neutral-300 hover:bg-neutral-750 font-semibold cursor-pointer"
+                    >
+                      বাতিল করুন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!revAuthor.trim() || !revComment.trim()) {
+                          alert('সব তথ্য সঠিকভাবে দিন!');
+                          return;
+                        }
+                        const updated: any = {
+                          ...editingReview,
+                          userName: revAuthor,
+                          rating: revRating,
+                          comment: revComment
+                        };
+                        const ok = await DB.saveReview(updated);
+                        if (ok) {
+                          setSystemReviews(systemReviews.map(r => r.id === updated.id ? updated : r));
+                          setEditingReview(null);
+                          alert('রিভিউ সফলভাবে এডিট ও সেভ করা হয়েছে!');
+                        }
+                      }}
+                      className="py-2 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 text-white font-bold cursor-pointer transition-all"
+                    >
+                      পরিবর্তন সেভ করুন
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 

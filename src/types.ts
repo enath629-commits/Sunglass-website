@@ -121,4 +121,6 @@ export interface LandingConfig {
   whatsappNumber: string;
   hotlineNumber: string;
   promoTexts: string[];
+  deliveryChargeInsideDhaka?: number;
+  deliveryChargeOutsideDhaka?: number;
 }

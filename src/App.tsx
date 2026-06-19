@@ -76,11 +76,7 @@ export default function App() {
 
       const dbConfig = await DB.getConfig();
       if (dbConfig) {
-        setConfig({
-          logoText: dbConfig.logoText || 'CHRONO & SHADE',
-          whatsappNumber: dbConfig.whatsappNumber || '+8801811122233',
-          hotlineNumber: dbConfig.hotlineNumber || '01811122233'
-        });
+        setConfig(dbConfig);
       }
     };
 
@@ -219,9 +215,28 @@ export default function App() {
             />
           </motion.div>
 
+        ) : selectedProduct ? (
+
+          /* VIEW 2: DEDICATED INDIVIDUAL PRODUCT PAGE */
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="py-4"
+            id="product-page-view"
+          >
+            <ProductDetail
+              product={selectedProduct}
+              onClose={() => setSelectedProduct(null)}
+              onAddToCart={handleAddToCart}
+              currentUser={currentUser}
+              onTriggerAuth={() => setIsAuthOpen(true)}
+              theme={theme}
+            />
+          </motion.div>
+
         ) : (
 
-          /* VIEW 2: CUSTOMER E-COMMERCE LANDING HUB */
+          /* VIEW 3: CUSTOMER E-COMMERCE LANDING HUB */
           <div className="space-y-12" id="client-landing-view">
             
             {/* Promo Slider Carousel area */}
@@ -431,20 +446,8 @@ export default function App() {
         )}
       </main>
 
-      {/* 3. Product Details Modal Drawer view overlay */}
-      <AnimatePresence>
-        {selectedProduct && (
-          <ProductDetail
-            product={selectedProduct}
-            onClose={() => setSelectedProduct(null)}
-            onAddToCart={handleAddToCart}
-            currentUser={currentUser}
-            onTriggerAuth={() => setIsAuthOpen(true)}
-            theme={theme}
-          />
-        )}
-      </AnimatePresence>
-
+      {/* 3. Empty slot (previously Product Details Modal Drawer view overlay) */}
+      
       {/* 4. Cart Sheet Drawer Overlay */}
       <CartDrawer
         isOpen={isCartOpen}

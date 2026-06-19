@@ -185,7 +185,9 @@ const INITIAL_LANDING_CONFIG: LandingConfig = {
     '🔥 আজই অর্ডার করলেই পাচ্ছেন সারা বাংলাদেশে ফ্রি ডেলিভারি!',
     '💎 আমাদের প্রতিটি পণ্যের সাথে পাবেন রিটার্ন গ্যারান্টি এবং ফাস্ট হোম কুরিয়ার!',
     '📦 ক্যাশ অন ডেলিভারি (হাতে পণ্য পেয়ে মূল্য পরিশোধ করার সুযোগ)!'
-  ]
+  ],
+  deliveryChargeInsideDhaka: 80,
+  deliveryChargeOutsideDhaka: 120
 };
 
 const INITIAL_ADMINS: AdminPermission[] = [
@@ -526,6 +528,43 @@ export const DB = {
         if (error) throw error;
       } catch (err) {
         console.error('Supabase add review failed', err);
+      }
+    }
+    return true;
+  },
+
+  deleteReview: async (id: string): Promise<boolean> => {
+    const local = getLocalStore<Review[]>(KEYS.REVIEWS, INITIAL_REVIEWS);
+    const filtered = local.filter(r => r.id !== id);
+    setLocalStore(KEYS.REVIEWS, filtered);
+
+    if (isSupabaseActive && supabase) {
+      try {
+        const { error } = await supabase.from('reviews').delete().eq('id', id);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Supabase delete review failed', err);
+      }
+    }
+    return true;
+  },
+
+  saveReview: async (review: Review): Promise<boolean> => {
+    const local = getLocalStore<Review[]>(KEYS.REVIEWS, INITIAL_REVIEWS);
+    const idx = local.findIndex(r => r.id === review.id);
+    if (idx > -1) {
+      local[idx] = review;
+    } else {
+      local.push(review);
+    }
+    setLocalStore(KEYS.REVIEWS, local);
+
+    if (isSupabaseActive && supabase) {
+      try {
+        const { error } = await supabase.from('reviews').upsert(review);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Supabase save review failed', err);
       }
     }
     return true;
