@@ -275,7 +275,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, theme }: Aut
                 id="auth-submit-btn"
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 py-3 px-4 rounded-xl text-white font-medium bg-gradient-to-r from-emerald-650 to-green-500 hover:from-emerald-600 hover:to-green-400 font-sans text-sm shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer transition-transform duration-205 active:scale-95 disabled:opacity-50"
+                className="w-full mt-2 py-3.5 px-4 rounded-2xl text-white font-extrabold font-sans text-sm flex items-center justify-center gap-2 cursor-pointer transition-all border border-t-[1.5px] border-t-white/50 border-[#6ee7b7] border-b-[5px] border-b-[#022c22] shadow-md disabled:opacity-50 bg-gradient-to-b from-[#34d399] via-[#059669] to-[#047857] hover:brightness-110 active:border-b-[1.5px] active:translate-y-[4px]"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

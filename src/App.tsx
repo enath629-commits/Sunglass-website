@@ -13,7 +13,8 @@ import AdminPanel from './components/AdminPanel';
 import ContactButtons from './components/ContactButtons';
 import { 
   Sparkles, ShieldCheck, HeartHandshake, Truck, RotateCcw, 
-  HelpCircle, Instagram, Facebook, Youtube, Heart, Eye 
+  HelpCircle, Instagram, Facebook, Youtube, Heart, Eye,
+  ArrowDownRight, ShoppingBag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -47,6 +48,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showAdminView, setShowAdminView] = useState(false);
+  const [buyNowDirectActive, setBuyNowDirectActive] = useState(false);
 
   // Sync Initial Setup on mount
   useEffect(() => {
@@ -143,6 +145,30 @@ export default function App() {
     await DB.addCartNotification(customerIdentifier, product.name, quantity);
 
     // Prompt user visually
+    setBuyNowDirectActive(false); // Normal add to cart
+    setIsCartOpen(true);
+  };
+
+  // Direct Instant Purchase Buy Now Flow
+  const handleBuyNow = async (product: Product, quantity: number = 1) => {
+    let freshCart = [...cart];
+    const index = freshCart.findIndex(item => item.product.id === product.id);
+
+    if (index >= 0) {
+      // Ensure quantity is updated or set to quantity
+      freshCart[index].quantity = Math.max(freshCart[index].quantity, quantity);
+    } else {
+      freshCart.push({ product, quantity });
+    }
+
+    setCart(freshCart);
+    localStorage.setItem('__shopping_cart__', JSON.stringify(freshCart));
+
+    // Emit live activity log
+    const customerIdentifier = currentUser?.displayName || 'Anonymous Guest';
+    await DB.addCartNotification(customerIdentifier, product.name, quantity);
+
+    setBuyNowDirectActive(true); // Flag to open CartDrawer immediately in checkout mode
     setIsCartOpen(true);
   };
 
@@ -226,6 +252,8 @@ export default function App() {
         theme={theme}
         onThemeToggle={() => setTheme(theme === 'light' ? 'dark' : 'light')}
         logoText={config.logoText}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
       />
 
       {/* 2. Main content container */}
@@ -262,6 +290,7 @@ export default function App() {
               product={selectedProduct}
               onClose={() => setSelectedProduct(null)}
               onAddToCart={handleAddToCart}
+              onBuyNow={handleBuyNow}
               currentUser={currentUser}
               onTriggerAuth={() => setIsAuthOpen(true)}
               theme={theme}
@@ -357,16 +386,18 @@ export default function App() {
                 {/* Filter and Search parameters */}
                 <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                   {/* Category select buttons */}
-                  <div className={`flex gap-1.5 p-1 rounded-xl border ${
-                    isDark ? 'bg-neutral-900/60 border-neutral-850' : 'bg-white border-neutral-200/80 shadow-xs'
+                  <div className={`flex gap-2 p-1.5 rounded-full border ${
+                    isDark ? 'bg-neutral-900/60 border-neutral-850' : 'bg-white border-neutral-200/85 shadow-xs'
                   }`}>
                     <button
                       id="category-tab-all"
                       onClick={() => setActiveCategory('all')}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-4.5 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer ${
                         activeCategory === 'all'
-                          ? 'bg-gradient-to-tr from-emerald-600 to-green-500 text-white shadow-xs'
-                          : isDark ? 'text-neutral-400 hover:text-white' : 'text-neutral-608 hover:text-neutral-900'
+                          ? 'bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] text-white border border-t-white/40 border-[#2dd4bf] border-b-[5px] border-b-[#0b5f55] shadow-md shadow-teal-500/10'
+                          : isDark 
+                            ? 'text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-full' 
+                            : 'text-neutral-600 hover:text-neutral-950 hover:bg-[#eaf8f6] rounded-full'
                       }`}
                     >
                       All Collections
@@ -374,10 +405,12 @@ export default function App() {
                     <button
                       id="category-tab-watch"
                       onClick={() => setActiveCategory('watch')}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-4.5 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer ${
                         activeCategory === 'watch'
-                          ? 'bg-gradient-to-tr from-emerald-600 to-green-500 text-white shadow-xs'
-                          : isDark ? 'text-neutral-400 hover:text-white' : 'text-neutral-608 hover:text-neutral-900'
+                          ? 'bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] text-white border border-t-white/40 border-[#2dd4bf] border-b-[5px] border-b-[#0b5f55] shadow-md shadow-teal-500/10'
+                          : isDark 
+                            ? 'text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-full' 
+                            : 'text-neutral-600 hover:text-neutral-950 hover:bg-[#eaf8f6] rounded-full'
                       }`}
                     >
                       Luxury Watches
@@ -385,28 +418,17 @@ export default function App() {
                     <button
                       id="category-tab-sunglass"
                       onClick={() => setActiveCategory('sunglass')}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-4.5 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer ${
                         activeCategory === 'sunglass'
-                          ? 'bg-gradient-to-tr from-emerald-600 to-green-500 text-white shadow-xs'
-                          : isDark ? 'text-neutral-400 hover:text-white' : 'text-neutral-608 hover:text-neutral-900'
+                          ? 'bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] text-white border border-t-white/40 border-[#2dd4bf] border-b-[5px] border-b-[#0b5f55] shadow-md shadow-teal-500/10'
+                          : isDark 
+                            ? 'text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-full' 
+                            : 'text-neutral-600 hover:text-neutral-950 hover:bg-[#eaf8f6] rounded-full'
                       }`}
                     >
                       Premium Sunglasses
                     </button>
                   </div>
-
-                  {/* Active Search text input */}
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search products... (e.g. Aviator)"
-                    className={`px-4 py-2.5 rounded-xl text-xs border focus:outline-none transition-all ${
-                      isDark 
-                        ? 'bg-neutral-900/80 border-neutral-800 text-white placeholder-neutral-500 focus:border-emerald-500' 
-                        : 'bg-white border-neutral-250 text-neutral-805 placeholder-neutral-400 focus:border-emerald-600 focus:bg-white shadow-xs'
-                    }`}
-                  />
                 </div>
               </div>
 
@@ -425,6 +447,7 @@ export default function App() {
                       <ProductCard
                         product={product}
                         onAddToCart={handleAddToCart}
+                        onBuyNow={handleBuyNow}
                         onViewDetails={setSelectedProduct}
                         theme={theme}
                       />
@@ -499,6 +522,7 @@ export default function App() {
         onTriggerAuth={() => setIsAuthOpen(true)}
         onClearCart={handleClearCart}
         theme={theme}
+        initialCheckoutMode={buyNowDirectActive}
       />
 
       {/* 5. Authentication Login / Signup Dialog */}

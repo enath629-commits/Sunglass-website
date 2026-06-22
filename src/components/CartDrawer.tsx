@@ -18,11 +18,13 @@ interface CartDrawerProps {
   onClearCart: () => void;
   theme: 'light' | 'dark';
   config?: any;
+  initialCheckoutMode?: boolean;
 }
 
 export default function CartDrawer({
   isOpen, onClose, cart, onUpdateQuantity, onRemoveItem, 
-  currentUser, onTriggerAuth, onClearCart, theme, config
+  currentUser, onTriggerAuth, onClearCart, theme, config,
+  initialCheckoutMode = false
 }: CartDrawerProps) {
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
   const [shippingAddress, setShippingAddress] = useState('');
@@ -42,6 +44,18 @@ export default function CartDrawer({
       setOrderPhone(currentUser.phoneNumber || '');
     }
   }, [currentUser]);
+
+  // Sync checkout mode and success state status when opens
+  React.useEffect(() => {
+    if (isOpen) {
+      if (initialCheckoutMode) {
+        setIsCheckoutMode(true);
+      } else {
+        setIsCheckoutMode(false);
+      }
+      setOrderedSuccess(null);
+    }
+  }, [isOpen, initialCheckoutMode]);
 
   const insideDhakaCharge = config?.deliveryChargeInsideDhaka !== undefined ? Number(config.deliveryChargeInsideDhaka) : 80;
   const outsideDhakaCharge = config?.deliveryChargeOutsideDhaka !== undefined ? Number(config.deliveryChargeOutsideDhaka) : 120;
@@ -190,7 +204,7 @@ export default function CartDrawer({
                         setOrderedSuccess(null);
                         onClose();
                       }}
-                      className="w-full py-2.5 bg-gradient-to-tr from-emerald-600 to-green-500 text-white rounded-xl text-xs sm:text-sm font-semibold hover:brightness-110 active:scale-95 cursor-pointer transition-all"
+                      className="w-full py-2.5 rounded-full text-xs sm:text-sm font-black text-white bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] border border-t-white/50 border-[#2dd4bf] border-b-[5px] border-b-[#0b5f55] active:border-b-[1.5px] active:translate-y-[3px] shadow-[0_4px_12px_rgba(20,184,166,0.3)] cursor-pointer transition-all"
                     >
                       Continue Shopping
                     </button>
@@ -438,7 +452,7 @@ export default function CartDrawer({
                       id="place-checkout-order-btn"
                       type="submit"
                       disabled={submitting}
-                      className="w-full py-3 bg-gradient-to-tr from-emerald-600 to-green-500 hover:brightness-110 active:scale-98 font-bold font-sans text-xs sm:text-sm text-white rounded-xl shadow-lg shadow-emerald-500/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="w-full py-3.5 rounded-2xl font-black font-sans text-xs sm:text-sm text-white select-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 border border-t-[1.5px] border-t-white/50 border-[#6ee7b7] border-b-[5px] border-b-[#022c22] shadow-md bg-gradient-to-b from-[#34d399] via-[#059669] to-[#047857] hover:brightness-110 active:border-b-[1.5px] active:translate-y-[4px]"
                     >
                       {submitting ? (
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -526,20 +540,20 @@ export default function CartDrawer({
                           <button
                             id="proceed-checkout-btn"
                             onClick={() => setIsCheckoutMode(true)}
-                            className="w-full py-3 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-450 hover:brightness-110 active:scale-95 text-white font-bold font-sans text-xs sm:text-sm rounded-xl shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                            className="w-full py-3.5 rounded-2xl font-black font-sans text-xs sm:text-sm text-white select-none transition-all flex items-center justify-center gap-2 cursor-pointer border border-t-[1.5px] border-t-white/50 border-[#6ee7b7] border-b-[5px] border-b-[#022c22] shadow-md bg-gradient-to-b from-[#34d399] via-[#059669] to-[#047857] hover:brightness-110 active:border-b-[1.5px] active:translate-y-[4px]"
                           >
                             <span>Proceed to Secure Checkout</span>
                             <ChevronRight size={16} />
                           </button>
                         ) : (
-                          <div className="space-y-2 text-center" id="cart-auth-required-footer">
+                          <div className="space-y-2.5 text-center" id="cart-auth-required-footer">
                             <p className="text-[10px] leading-relaxed text-neutral-400">
                               Please register or login to securely place your order.
                             </p>
                             <button
                               id="cart-login-btn"
                               onClick={onTriggerAuth}
-                              className="w-full py-2.5 bg-neutral-900 border border-neutral-700 text-white rounded-xl text-xs font-semibold cursor-pointer active:scale-95 hover:bg-neutral-800 transition-all flex items-center justify-center gap-1"
+                              className="w-full py-2.5 rounded-2xl text-xs font-black cursor-pointer transition-all flex items-center justify-center gap-1 border border-t-white/50 border-[#6ee7b7] border-b-[4px] border-b-[#022c22] active:border-b-[1px] active:translate-y-[3px] shadow-sm bg-gradient-to-b from-[#34d399] via-[#059669] to-[#047857] text-white hover:brightness-110"
                             >
                               <span>Register / Login</span>
                               <CornerDownRight size={13} />

@@ -134,7 +134,7 @@ export default function ContactButtons({
             id="chat-messenger-box"
           >
             {/* Messenger Header with Status */}
-            <div className="p-4 bg-gradient-to-r from-emerald-650 to-green-500 text-white flex items-center justify-between shadow-md">
+            <div className="p-4 bg-gradient-to-r from-emerald-700 via-teal-600 to-teal-500 text-white flex items-center justify-between shadow-md">
               <div className="flex items-center gap-2.5">
                 <div className="relative w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-sans font-bold">
                   CS
@@ -208,7 +208,7 @@ export default function ContactButtons({
                   <button
                     id="submit-visitor-btn"
                     type="submit"
-                    className="w-full mt-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-emerald-650 to-green-500 hover:brightness-110 active:scale-95 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                    className="w-full mt-2 py-3 px-4 rounded-full text-xs sm:text-sm font-black text-white bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] border border-t-white/50 border-[#2dd4bf] border-b-[4px] active:border-b-[1px] active:translate-y-[3px] shadow-[0_4px_12px_rgba(20,184,166,0.3)] cursor-pointer transition-all flex items-center justify-center gap-1.5"
                   >
                     <span>Start Chatting</span>
                     <MessageSquare size={14} />
@@ -310,7 +310,7 @@ export default function ContactButtons({
               <motion.a
                 id="contact-call-btn"
                 href={`tel:${hotlineNumber}`}
-                className="flex items-center gap-2 p-3 bg-gradient-to-r from-emerald-605 to-green-500 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all text-xs font-semibold"
+                className="flex items-center gap-2 p-3 bg-gradient-to-b from-[#ff7a60] via-[#ff5a3c] to-[#e03a1d] border border-t-white/50 border-[#ff8a74] border-b-[4px] active:border-b-[1px] active:translate-y-[3px] text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-black shadow-orange-500/20"
                 whileHover={{ y: -2 }}
               >
                 <span className="bg-black/20 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide">Hotline</span>
@@ -324,7 +324,7 @@ export default function ContactButtons({
                 href={cleanWhatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 p-3 bg-emerald-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all text-xs font-semibold"
+                className="flex items-center gap-2 p-3 bg-gradient-to-b from-sky-450 via-sky-550 to-sky-650 border border-t-white/50 border-sky-350 border-b-[4px] active:border-b-[1px] active:translate-y-[3px] text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-black shadow-sky-500/10"
                 whileHover={{ y: -2 }}
               >
                 <span className="bg-black/20 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide font-sans">WhatsApp</span>
@@ -341,7 +341,7 @@ export default function ContactButtons({
                   setShowMessenger(true);
                   setIsOpen(false);
                 }}
-                className="flex items-center gap-2 p-3 bg-gradient-to-r from-emerald-650 to-green-500 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all text-xs font-semibold cursor-pointer"
+                className="flex items-center gap-2 p-3 bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] border border-t-white/40 border-[#2dd4bf] border-b-[4px] active:border-b-[1px] active:translate-y-[3px] text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-black cursor-pointer shadow-teal-500/20"
                 whileHover={{ y: -2 }}
               >
                 <span className="bg-black/20 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide font-sans">Live Chat</span>
@@ -357,7 +357,7 @@ export default function ContactButtons({
           <motion.button
             id="contact-menu-trigger"
             onClick={() => setIsOpen(!isOpen)}
-            className="w-14 h-14 rounded-full bg-gradient-to-tr from-emerald-600 to-green-550 text-white shadow-xl hover:shadow-emerald-500/20 flex items-center justify-center transition-all cursor-pointer border border-white/10 focus:outline-none relative group"
+            className="w-14 h-14 rounded-full bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] border border-t-white/40 border-[#2dd4bf] border-b-[5px] active:border-b-[1.5px] text-white shadow-xl hover:shadow-teal-500/30 flex items-center justify-center transition-all cursor-pointer border-white/10 focus:outline-none relative group"
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.94 }}
             title="যোগাযোগ ও লাইভ চ্যাট"

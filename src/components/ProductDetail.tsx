@@ -3,7 +3,8 @@ import { Product, Review, User } from '../types';
 import { DB } from '../lib/db';
 import { 
   Star, ArrowLeft, ShieldCheck, Truck, RefreshCw, 
-  MessageSquarePlus, Sparkles, UserCheck, ChevronRight, CornerDownRight 
+  MessageSquarePlus, Sparkles, UserCheck, ChevronRight, CornerDownRight,
+  ShoppingCart
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -11,13 +12,14 @@ interface ProductDetailProps {
   product: Product;
   onClose: () => void;
   onAddToCart: (product: Product, quantity: number) => void;
+  onBuyNow?: (product: Product, quantity: number) => void;
   currentUser: User | null;
   onTriggerAuth: () => void;
   theme: 'light' | 'dark';
 }
 
 export default function ProductDetail({ 
-  product, onClose, onAddToCart, currentUser, onTriggerAuth, theme 
+  product, onClose, onAddToCart, onBuyNow, currentUser, onTriggerAuth, theme 
 }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(product.images[0]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -212,15 +214,15 @@ export default function ProductDetail({
           {/* Buying & Cart Action Elements */}
           <div className={`pt-4 border-t ${isDark ? 'border-neutral-800' : 'border-neutral-100'} space-y-4`}>
             {product.stock > 0 ? (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
                 {/* Quantity Incrementor */}
-                <div className={`flex items-center justify-between rounded-xl p-1.5 border max-w-[130px] ${
-                  isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-200'
+                <div className={`flex items-center justify-between rounded-xl p-1.5 border-2 max-w-[130px] ${
+                  isDark ? 'bg-neutral-900 border-neutral-805' : 'bg-neutral-50 border-neutral-200 shadow-inner'
                 }`}>
                   <button
                     id="qty-decrement-btn"
                     onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm select-none hover:bg-neutral-200 active:scale-95 transition-all ${
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm select-none hover:bg-neutral-250 active:scale-95 transition-all ${
                       isDark ? 'hover:bg-neutral-800 text-white' : 'hover:bg-neutral-200 text-neutral-800'
                     }`}
                   >
@@ -230,22 +232,35 @@ export default function ProductDetail({
                   <button
                     id="qty-increment-btn"
                     onClick={() => setQuantity(prev => Math.min(product.stock, prev + 1))}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm select-none hover:bg-neutral-200 active:scale-95 transition-all ${
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm select-none hover:bg-neutral-250 active:scale-95 transition-all ${
                       isDark ? 'hover:bg-neutral-800 text-white' : 'hover:bg-neutral-200 text-neutral-800'
                     }`}
                   >
                     +
                   </button>
                 </div>
+                {/* 3D Action Buttons Grid */}
+                <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Add to Cart 3D Button - Premium Emerald Water Bubble */}
+                  <button
+                    id="add-qty-to-cart-btn"
+                    onClick={() => onAddToCart(product, quantity)}
+                    className="py-3 px-6 rounded-2xl font-black font-sans text-xs sm:text-sm flex items-center justify-center gap-2 select-none cursor-pointer transition-all border border-t-[1.5px] border-t-white/50 border-[#6ee7b7] border-b-[5px] border-b-[#022c22] shadow-md bg-gradient-to-b from-[#34d399] via-[#059669] to-[#047857] hover:brightness-110 text-white active:border-b-[1.5px] active:translate-y-[4px]"
+                  >
+                    <ShoppingCart size={15} />
+                    <span>Add to Cart (৳{(product.price * quantity).toLocaleString('en-US')})</span>
+                  </button>
 
-                {/* Add to Cart Premium Action button */}
-                <button
-                  id="add-qty-to-cart-btn"
-                  onClick={() => onAddToCart(product, quantity)}
-                  className="flex-grow py-3 px-6 rounded-xl font-medium text-white bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-450 text-sm shadow-md shadow-emerald-900/10 cursor-pointer active:scale-98 transition-all flex items-center justify-center gap-2"
-                >
-                  <span>Add to Cart (৳{(product.price * quantity).toLocaleString('en-US')})</span>
-                </button>
+                  {/* Buy Now Hot 3D Button - Premium Teal/Mint Water Bubble */}
+                  <button
+                    id="buy-qty-now-btn"
+                    onClick={() => onBuyNow ? onBuyNow(product, quantity) : onAddToCart(product, quantity)}
+                    className="py-3 px-6 rounded-2xl font-black font-sans text-xs sm:text-sm text-white bg-gradient-to-b from-[#06b6d4] via-[#0d9488] to-[#115e59] border border-t-[1.5px] border-t-white/50 border-[#2dd4bf] border-b-[5px] border-b-[#022826] hover:brightness-115 shadow-md flex items-center justify-center gap-2 select-none cursor-pointer active:border-b-[1.5px] active:translate-y-[4px]"
+                  >
+                    <Sparkles size={15} />
+                    <span>Buy Now</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center text-xs font-semibold text-red-500">
@@ -335,7 +350,7 @@ export default function ProductDetail({
                 id="submit-review-btn"
                 type="submit"
                 disabled={loadingReview}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-green-500 hover:brightness-110 active:scale-95 shadow-md shadow-emerald-500/10 cursor-pointer transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-2xl text-xs font-black text-white bg-gradient-to-b from-[#34d399] via-[#059669] to-[#047857] border border-t-[1px] border-t-white/50 border-[#6ee7b7] border-b-[4px] border-b-[#022c22] active:border-b-[1px] active:translate-y-[3px] shadow-sm cursor-pointer transition-all flex items-center justify-center gap-2"
               >
                 {loadingReview ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -360,7 +375,7 @@ export default function ProductDetail({
               <button
                 id="review-auth-trigger"
                 onClick={onTriggerAuth}
-                className="inline-flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-green-500 text-white font-semibold text-xs py-2 px-4 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all"
+                className="inline-flex items-center gap-1 bg-gradient-to-b from-[#34d399] via-[#059669] to-[#047857] border border-t-[1.5px] border-t-white/50 border-[#6ee7b7] border-[#022c22] border-b-[4px] active:border-b-[1px] active:translate-y-[2px] text-white font-black text-xs py-2.5 px-5 rounded-2xl shadow-md cursor-pointer transition-all"
               >
                 <span>Register / Login</span>
                 <ChevronRight size={14} />
