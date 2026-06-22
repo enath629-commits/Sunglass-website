@@ -1927,6 +1927,7 @@ CREATE TABLE messages (
   "senderId" TEXT NOT NULL,
   "senderName" TEXT NOT NULL,
   text TEXT NOT NULL,
+  "imageUrl" TEXT,
   timestamp TIMESTAMPTZ DEFAULT NOW(),
   "isFromAdmin" BOOLEAN DEFAULT FALSE,
   "sessionId" TEXT NOT NULL
@@ -1956,7 +1957,7 @@ CREATE TABLE users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
-  "displayName" TEXT NOT NULL,
+  "displayName" TEXT,
   "phoneNumber" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
@@ -1997,7 +1998,67 @@ VALUES (
   'Emon@36231',
   'Admin Emon',
   '01811122233'
-) ON CONFLICT (email) DO NOTHING;`}
+) ON CONFLICT (email) DO NOTHING;
+
+-- 8. Landing Config Table
+CREATE TABLE IF NOT EXISTS landing_config (
+  id TEXT PRIMARY KEY,
+  "logoText" TEXT,
+  "logoIcon" TEXT,
+  "heroTitle" TEXT,
+  "heroSubtitle" TEXT,
+  "whatsappNumber" TEXT,
+  "hotlineNumber" TEXT,
+  "promoTexts" TEXT[] DEFAULT '{}',
+  "deliveryChargeInsideDhaka" DOUBLE PRECISION,
+  "deliveryChargeOutsideDhaka" DOUBLE PRECISION,
+  "arrivalsTitle" TEXT,
+  "arrivalsSubtitle" TEXT,
+  "brandStoryTitle" TEXT,
+  "brandStorySubtitle" TEXT,
+  "brandStoryDescription" TEXT,
+  "themePrimaryColor" TEXT,
+  "themeAccentColor" TEXT,
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insert default landing configuration settings
+INSERT INTO landing_config (
+  id, "logoText", "logoIcon", "heroTitle", "heroSubtitle", 
+  "whatsappNumber", "hotlineNumber", "promoTexts", 
+  "deliveryChargeInsideDhaka", "deliveryChargeOutsideDhaka", 
+  "arrivalsTitle", "arrivalsSubtitle", 
+  "brandStoryTitle", "brandStorySubtitle", "brandStoryDescription", 
+  "themePrimaryColor", "themeAccentColor"
+) VALUES (
+  'primary', 
+  'PREMIUM CHRONO & SHADE', 
+  'Crown', 
+  'আভিজাত্য ও আধুনিকতার অনন্য মেলবন্ধন', 
+  'আমাদের প্রিমিয়াম ক্রোনোগ্রাফ ঘড়ি ও ১০০% ইউভি সুরক্ষিত পোলারাইজড সানগ্লাস দিয়ে আপনার ব্যক্তিত্বকে করে তুলুন আকর্ষণীয় ও আভিজাত্যপূর্ণ।', 
+  '+8801712345678', 
+  '+8801911122233', 
+  ARRAY['🔥 আজই অর্ডার করলেই পাচ্ছেন সারা বাংলাদেশে ফ্রি ডেলিভারি!', '💎 আমাদের প্রতিটি পণ্যের সাথে পাবেন রিটার্ন গ্যারান্টি এবং ফাস্ট হোম কুরিয়ার!', '📦 ক্যাশ অন ডেলিভারি (হাতে পণ্য পেয়ে মূল্য পরিশোধ করার সুযোগ)!'], 
+  80, 
+  120, 
+  'Exclusive Handpicked Designs', 
+  'LATEST ARRIVALS', 
+  'CHRONO & SHADE - Premium Lifestyle Partner', 
+  'Our Craftsmanship', 
+  'We believe watches and sunglasses are not merely accessories, but assertions of status and personality. Every chronograph watch and polarized lens is meticulously evaluated by our multi-tier Quality Assurance team. Direct distribution allows us to offer premium products, luxury feels, and flawless utility at unmatched wholesale pricing in the region.', 
+  '#10b981', 
+  '#f97316'
+) ON CONFLICT (id) DO NOTHING;
+
+-- 9. Disable Row Level Security on all tables to ensure public shoppers and customer registers work flawlessly
+ALTER TABLE products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews DISABLE ROW LEVEL SECURITY;
+ALTER TABLE messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE banners DISABLE ROW LEVEL SECURITY;
+ALTER TABLE admins DISABLE ROW LEVEL SECURITY;
+ALTER TABLE users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE landing_config DISABLE ROW LEVEL SECURITY;`} Copied SQL!
                   </pre>
 
                   <div className="mt-3 flex items-start gap-2 text-neutral-400 text-[10px] leading-relaxed">

@@ -523,6 +523,7 @@ export default function App() {
         onClearCart={handleClearCart}
         theme={theme}
         initialCheckoutMode={buyNowDirectActive}
+        config={config}
       />
 
       {/* 5. Authentication Login / Signup Dialog */}

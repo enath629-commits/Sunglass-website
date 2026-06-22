@@ -530,7 +530,21 @@ export const DB = {
       try {
         const { data, error } = await supabase.from('products').select('*');
         if (error) throw error;
-        if (data && data.length > 0) return data as Product[];
+        if (data && data.length > 0) {
+          return data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: Number(p.price),
+            originalPrice: p.originalPrice !== undefined ? (p.originalPrice !== null ? Number(p.originalPrice) : undefined) : (p.originalprice !== undefined && p.originalprice !== null ? Number(p.originalprice) : undefined),
+            description: p.description || '',
+            images: p.images || [],
+            rating: p.rating !== undefined ? Number(p.rating) : 4.7,
+            stock: p.stock !== undefined ? Number(p.stock) : 10,
+            features: p.features || [],
+            createdAt: p.createdAt !== undefined ? p.createdAt : (p.createdat !== undefined ? p.createdat : new Date().toISOString())
+          }));
+        }
       } catch (err) {
         console.warn('Supabase products fetch failed, falling back to LocalDB', err);
       }
@@ -550,10 +564,44 @@ export const DB = {
 
     if (isSupabaseActive && supabase) {
       try {
-        const { error } = await supabase.from('products').upsert(product);
-        if (error) throw error;
+        const camelPayload = {
+          id: product.id,
+          name: product.name,
+          category: product.category,
+          price: product.price,
+          originalPrice: product.originalPrice || null,
+          description: product.description || '',
+          images: product.images,
+          rating: product.rating,
+          stock: product.stock,
+          features: product.features,
+          createdAt: product.createdAt || new Date().toISOString()
+        };
+
+        const lowerPayload = {
+          id: product.id,
+          name: product.name,
+          category: product.category,
+          price: product.price,
+          originalprice: product.originalPrice || null,
+          description: product.description || '',
+          images: product.images,
+          rating: product.rating,
+          stock: product.stock,
+          features: product.features,
+          createdat: product.createdAt || new Date().toISOString()
+        };
+
+        const { error } = await supabase.from('products').upsert(camelPayload);
+        if (error) {
+          console.warn('Supabase product upsert with camelCase failed, trying lowercase fields...', error.message);
+          const { error: lowerErr } = await supabase.from('products').upsert(lowerPayload);
+          if (lowerErr) {
+            console.error('Supabase product upsert failed on both configurations:', lowerErr.message);
+          }
+        }
       } catch (err) {
-        console.error('Supabase save product failed', err);
+        console.error('Supabase save product failed exception', err);
       }
     }
     return true;
@@ -585,9 +633,27 @@ export const DB = {
         if (productId) {
           q = q.eq('productId', productId);
         }
-        const { data, error } = await q;
-        if (error) throw error;
-        if (data) return data as Review[];
+        let { data, error } = await q;
+        if (error) {
+          console.warn('Supabase reviews query with camelCase productId failed, trying lowercase productid...');
+          let q2 = supabase.from('reviews').select('*');
+          if (productId) {
+            q2 = q2.eq('productid', productId);
+          }
+          const { data: data2, error: error2 } = await q2;
+          if (error2) throw error2;
+          data = data2;
+        }
+        if (data) {
+          return data.map((r: any) => ({
+            id: r.id,
+            productId: r.productId !== undefined ? r.productId : (r.productid !== undefined ? r.productid : ''),
+            userName: r.userName !== undefined ? r.userName : (r.username !== undefined ? r.username : ''),
+            rating: Number(r.rating || 5),
+            comment: r.comment || '',
+            createdAt: r.createdAt !== undefined ? r.createdAt : (r.createdat !== undefined ? r.createdat : new Date().toISOString())
+          }));
+        }
       } catch (err) {
         console.warn('Supabase reviews fetch failed', err);
       }
@@ -620,10 +686,34 @@ export const DB = {
 
     if (isSupabaseActive && supabase) {
       try {
-        const { error } = await supabase.from('reviews').insert(review);
-        if (error) throw error;
+        const camelPayload = {
+          id: review.id,
+          productId: review.productId,
+          userName: review.userName,
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: review.createdAt || new Date().toISOString()
+        };
+
+        const lowerPayload = {
+          id: review.id,
+          productid: review.productId,
+          username: review.userName,
+          rating: review.rating,
+          comment: review.comment,
+          createdat: review.createdAt || new Date().toISOString()
+        };
+
+        const { error } = await supabase.from('reviews').insert(camelPayload);
+        if (error) {
+          console.warn('Supabase insert review with camelCase payload failed, trying lowercase fields...', error.message);
+          const { error: lowerErr } = await supabase.from('reviews').insert(lowerPayload);
+          if (lowerErr) {
+            console.error('Supabase insert review failed on both field configurations:', lowerErr.message);
+          }
+        }
       } catch (err) {
-        console.error('Supabase add review failed', err);
+        console.error('Supabase add review failed exception', err);
       }
     }
     return true;
@@ -657,10 +747,34 @@ export const DB = {
 
     if (isSupabaseActive && supabase) {
       try {
-        const { error } = await supabase.from('reviews').upsert(review);
-        if (error) throw error;
+        const camelPayload = {
+          id: review.id,
+          productId: review.productId,
+          userName: review.userName,
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: review.createdAt || new Date().toISOString()
+        };
+
+        const lowerPayload = {
+          id: review.id,
+          productid: review.productId,
+          username: review.userName,
+          rating: review.rating,
+          comment: review.comment,
+          createdat: review.createdAt || new Date().toISOString()
+        };
+
+        const { error } = await supabase.from('reviews').upsert(camelPayload);
+        if (error) {
+          console.warn('Supabase review upsert with camelCase failed, trying lowercase fields...', error.message);
+          const { error: lowerErr } = await supabase.from('reviews').upsert(lowerPayload);
+          if (lowerErr) {
+            console.error('Supabase review upsert failed on both configurations:', lowerErr.message);
+          }
+        }
       } catch (err) {
-        console.error('Supabase save review failed', err);
+        console.error('Supabase save review failed exception', err);
       }
     }
     return true;
@@ -674,7 +788,15 @@ export const DB = {
       try {
         const { data, error } = await supabase.from('banners').select('*');
         if (error) throw error;
-        if (data && data.length > 0) return data as PromoBanner[];
+        if (data && data.length > 0) {
+          return data.map((b: any) => ({
+            id: b.id,
+            imageUrl: b.imageUrl !== undefined ? b.imageUrl : (b.imageurl !== undefined ? b.imageurl : ''),
+            title: b.title,
+            subtitle: b.subtitle || '',
+            badge: b.badge || ''
+          }));
+        }
       } catch (err) {
         console.warn('Supabase banners failed', err);
       }
@@ -691,10 +813,32 @@ export const DB = {
 
     if (isSupabaseActive && supabase) {
       try {
-        const { error } = await supabase.from('banners').upsert(banner);
-        if (error) throw error;
+        const camelPayload = {
+          id: banner.id,
+          imageUrl: banner.imageUrl,
+          title: banner.title,
+          subtitle: banner.subtitle || '',
+          badge: banner.badge || ''
+        };
+
+        const lowerPayload = {
+          id: banner.id,
+          imageurl: banner.imageUrl,
+          title: banner.title,
+          subtitle: banner.subtitle || '',
+          badge: banner.badge || ''
+        };
+
+        const { error } = await supabase.from('banners').upsert(camelPayload);
+        if (error) {
+          console.warn('Supabase banner upsert with camelCase failed, trying lowercase fields...', error.message);
+          const { error: lowerErr } = await supabase.from('banners').upsert(lowerPayload);
+          if (lowerErr) {
+            console.error('Supabase banner upsert failed on both configurations:', lowerErr.message);
+          }
+        }
       } catch (err) {
-        console.error('Supabase banner save error', err);
+        console.error('Supabase banner save error exception', err);
       }
     }
     return true;
@@ -723,7 +867,27 @@ export const DB = {
       try {
         const { data, error } = await supabase.from('landing_config').select('*').limit(1).single();
         if (error) throw error;
-        if (data) return data as LandingConfig;
+        if (data) {
+          const normalized: LandingConfig = {
+            logoText: data.logoText !== undefined ? data.logoText : (data.logotext !== undefined ? data.logotext : INITIAL_LANDING_CONFIG.logoText),
+            logoIcon: data.logoIcon !== undefined ? data.logoIcon : (data.logoicon !== undefined ? data.logoicon : INITIAL_LANDING_CONFIG.logoIcon),
+            heroTitle: data.heroTitle !== undefined ? data.heroTitle : (data.herotitle !== undefined ? data.herotitle : INITIAL_LANDING_CONFIG.heroTitle),
+            heroSubtitle: data.heroSubtitle !== undefined ? data.heroSubtitle : (data.herosubtitle !== undefined ? data.herosubtitle : INITIAL_LANDING_CONFIG.heroSubtitle),
+            whatsappNumber: data.whatsappNumber !== undefined ? data.whatsappNumber : (data.whatsappnumber !== undefined ? data.whatsappnumber : INITIAL_LANDING_CONFIG.whatsappNumber),
+            hotlineNumber: data.hotlineNumber !== undefined ? data.hotlineNumber : (data.hotlinenumber !== undefined ? data.hotlinenumber : INITIAL_LANDING_CONFIG.hotlineNumber),
+            promoTexts: data.promoTexts !== undefined ? data.promoTexts : (data.promotexts !== undefined ? data.promotexts : INITIAL_LANDING_CONFIG.promoTexts),
+            deliveryChargeInsideDhaka: data.deliveryChargeInsideDhaka !== undefined ? Number(data.deliveryChargeInsideDhaka) : (data.deliverychargeinsidedhaka !== undefined ? Number(data.deliverychargeinsidedhaka) : INITIAL_LANDING_CONFIG.deliveryChargeInsideDhaka),
+            deliveryChargeOutsideDhaka: data.deliveryChargeOutsideDhaka !== undefined ? Number(data.deliveryChargeOutsideDhaka) : (data.deliverychargeoutsidedhaka !== undefined ? Number(data.deliverychargeoutsidedhaka) : INITIAL_LANDING_CONFIG.deliveryChargeOutsideDhaka),
+            arrivalsTitle: data.arrivalsTitle !== undefined ? data.arrivalsTitle : (data.arrivalstitle !== undefined ? data.arrivalstitle : INITIAL_LANDING_CONFIG.arrivalsTitle),
+            arrivalsSubtitle: data.arrivalsSubtitle !== undefined ? data.arrivalsSubtitle : (data.arrivalssubtitle !== undefined ? data.arrivalssubtitle : INITIAL_LANDING_CONFIG.arrivalsSubtitle),
+            brandStoryTitle: data.brandStoryTitle !== undefined ? data.brandStoryTitle : (data.brandstorytitle !== undefined ? data.brandstorytitle : INITIAL_LANDING_CONFIG.brandStoryTitle),
+            brandStorySubtitle: data.brandStorySubtitle !== undefined ? data.brandStorySubtitle : (data.brandstorysubtitle !== undefined ? data.brandstorysubtitle : INITIAL_LANDING_CONFIG.brandStorySubtitle),
+            brandStoryDescription: data.brandStoryDescription !== undefined ? data.brandStoryDescription : (data.brandstorydescription !== undefined ? data.brandstorydescription : INITIAL_LANDING_CONFIG.brandStoryDescription),
+            themePrimaryColor: data.themePrimaryColor !== undefined ? data.themePrimaryColor : (data.themeprimarycolor !== undefined ? data.themeprimarycolor : INITIAL_LANDING_CONFIG.themePrimaryColor),
+            themeAccentColor: data.themeAccentColor !== undefined ? data.themeAccentColor : (data.themeaccentcolor !== undefined ? data.themeaccentcolor : INITIAL_LANDING_CONFIG.themeAccentColor),
+          };
+          return normalized;
+        }
       } catch (err) {
         console.warn('Supabase landing_config fetch failed', err);
       }
@@ -735,10 +899,56 @@ export const DB = {
     setLocalStore(KEYS.CONFIG, config);
     if (isSupabaseActive && supabase) {
       try {
-        const { error } = await supabase.from('landing_config').upsert({ id: 'primary', ...config });
-        if (error) throw error;
+        const camelPayload = {
+          id: 'primary',
+          logoText: config.logoText,
+          logoIcon: config.logoIcon,
+          heroTitle: config.heroTitle,
+          heroSubtitle: config.heroSubtitle,
+          whatsappNumber: config.whatsappNumber,
+          hotlineNumber: config.hotlineNumber,
+          promoTexts: config.promoTexts,
+          deliveryChargeInsideDhaka: config.deliveryChargeInsideDhaka,
+          deliveryChargeOutsideDhaka: config.deliveryChargeOutsideDhaka,
+          arrivalsTitle: config.arrivalsTitle,
+          arrivalsSubtitle: config.arrivalsSubtitle,
+          brandStoryTitle: config.brandStoryTitle,
+          brandStorySubtitle: config.brandStorySubtitle,
+          brandStoryDescription: config.brandStoryDescription,
+          themePrimaryColor: config.themePrimaryColor,
+          themeAccentColor: config.themeAccentColor
+        };
+
+        const lowerPayload = {
+          id: 'primary',
+          logotext: config.logoText,
+          logoicon: config.logoIcon,
+          herotitle: config.heroTitle,
+          herosubtitle: config.heroSubtitle,
+          whatsappnumber: config.whatsappNumber,
+          hotlinenumber: config.hotlineNumber,
+          promotexts: config.promoTexts,
+          deliverychargeinsidedhaka: config.deliveryChargeInsideDhaka,
+          deliverychargeoutsidedhaka: config.deliveryChargeOutsideDhaka,
+          arrivalstitle: config.arrivalsTitle,
+          arrivalssubtitle: config.arrivalsSubtitle,
+          brandstorytitle: config.brandStoryTitle,
+          brandstorysubtitle: config.brandStorySubtitle,
+          brandstorydescription: config.brandStoryDescription,
+          themeprimarycolor: config.themePrimaryColor,
+          themeaccentcolor: config.themeAccentColor
+        };
+
+        const { error } = await supabase.from('landing_config').upsert(camelPayload);
+        if (error) {
+          console.warn('Supabase config upsert with camelCase failed, trying lowercase fields...', error.message);
+          const { error: lowerErr } = await supabase.from('landing_config').upsert(lowerPayload);
+          if (lowerErr) {
+            console.error('Supabase config upsert failed on both field configurations:', lowerErr.message);
+          }
+        }
       } catch (err) {
-        console.error('Supabase config save failed', err);
+        console.error('Supabase config save execution exception', err);
       }
     }
     return true;
@@ -752,7 +962,23 @@ export const DB = {
       try {
         const { data, error } = await supabase.from('orders').select('*');
         if (error) throw error;
-        if (data && data.length > 0) return data as Order[];
+        if (data) {
+          return data.map((o: any) => ({
+            id: o.id,
+            userId: o.userId !== undefined ? o.userId : (o.userid !== undefined ? o.userid : ''),
+            userName: o.userName !== undefined ? o.userName : (o.username !== undefined ? o.username : ''),
+            userEmail: o.userEmail !== undefined ? o.userEmail : (o.useremail !== undefined ? o.useremail : ''),
+            userPhone: o.userPhone !== undefined ? o.userPhone : (o.userphone !== undefined ? o.userphone : ''),
+            shippingAddress: o.shippingAddress !== undefined ? o.shippingAddress : (o.shippingaddress !== undefined ? o.shippingaddress : ''),
+            items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
+            totalAmount: o.totalAmount !== undefined ? Number(o.totalAmount) : (o.totalamount !== undefined ? Number(o.totalamount) : 0),
+            paymentMethod: o.paymentMethod !== undefined ? o.paymentMethod : (o.paymentmethod !== undefined ? o.paymentmethod : 'cod'),
+            paymentNumber: o.paymentNumber !== undefined ? o.paymentNumber : (o.paymentnumber !== undefined ? o.paymentnumber : ''),
+            transactionId: o.transactionId !== undefined ? o.transactionId : (o.transactionid !== undefined ? o.transactionid : ''),
+            status: o.status !== undefined ? o.status : 'pending',
+            createdAt: o.createdAt !== undefined ? o.createdAt : (o.createdat !== undefined ? o.createdat : new Date().toISOString())
+          }));
+        }
       } catch (err) {
         console.warn('Supabase orders fetch failed', err);
       }
@@ -775,17 +1001,56 @@ export const DB = {
 
     if (isSupabaseActive && supabase) {
       try {
-        const { error } = await supabase.from('orders').insert(order);
-        if (error) throw error;
+        const camelPayload = {
+          id: order.id,
+          userId: order.userId,
+          userName: order.userName,
+          userEmail: order.userEmail,
+          userPhone: order.userPhone,
+          shippingAddress: order.shippingAddress,
+          items: order.items,
+          totalAmount: order.totalAmount,
+          paymentMethod: order.paymentMethod,
+          paymentNumber: order.paymentNumber || null,
+          transactionId: order.transactionId || null,
+          status: order.status,
+          createdAt: order.createdAt
+        };
+
+        const lowerPayload = {
+          id: order.id,
+          userid: order.userId,
+          username: order.userName,
+          useremail: order.userEmail,
+          userphone: order.userPhone,
+          shippingaddress: order.shippingAddress,
+          items: order.items,
+          totalamount: order.totalAmount,
+          paymentmethod: order.paymentMethod,
+          paymentnumber: order.paymentNumber || null,
+          transactionid: order.transactionId || null,
+          status: order.status,
+          createdat: order.createdAt
+        };
+
+        const { error } = await supabase.from('orders').insert(camelPayload);
+        if (error) {
+          console.warn('Supabase order insert with camelCase failed, trying lowercase fields...', error.message);
+          const { error: lowerErr } = await supabase.from('orders').insert(lowerPayload);
+          if (lowerErr) {
+            console.error('Supabase order insert failed on both configurations:', lowerErr.message);
+          }
+        }
+
         // Upsert modified products
         for (const item of order.items) {
           const updatedProduct = products.find(pr => pr.id === item.productId);
           if (updatedProduct) {
-            await supabase.from('products').upsert(updatedProduct);
+            await DB.saveProduct(updatedProduct);
           }
         }
       } catch (err) {
-        console.error('Supabase order creation failure', err);
+        console.error('Supabase order creation failure exception', err);
       }
     }
     return true;
@@ -802,7 +1067,11 @@ export const DB = {
     if (isSupabaseActive && supabase) {
       try {
         const { error } = await supabase.from('orders').update({ status }).eq('id', id);
-        if (error) throw error;
+        if (error) {
+          // Try lowercase table update status
+          const { error: lowerErr } = await supabase.from('orders').update({ status }).eq('id', id);
+          if (lowerErr) throw lowerErr;
+        }
       } catch (err) {
         console.error('Supabase order status update failure', err);
       }
@@ -1084,18 +1353,18 @@ export const DB = {
           id: augmentedUser.id,
           email: augmentedUser.email,
           password: augmentedUser.password,
-          displayName: augmentedUser.displayName,
-          phoneNumber: augmentedUser.phoneNumber,
-          createdAt: augmentedUser.createdAt
+          displayName: augmentedUser.displayName || 'Customer',
+          phoneNumber: augmentedUser.phoneNumber || null,
+          createdAt: augmentedUser.createdAt || new Date().toISOString()
         };
 
         const lowerPayload = {
           id: augmentedUser.id,
           email: augmentedUser.email,
           password: augmentedUser.password,
-          displayname: augmentedUser.displayName,
-          phonenumber: augmentedUser.phoneNumber,
-          createdat: augmentedUser.createdAt
+          displayname: augmentedUser.displayName || 'Customer',
+          phonenumber: augmentedUser.phoneNumber || null,
+          createdat: augmentedUser.createdAt || new Date().toISOString()
         };
 
         // Try camelCase first
