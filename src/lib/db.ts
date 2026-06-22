@@ -775,7 +775,7 @@ export const DB = {
 
   getChatSessions: async (): Promise<ChatSession[]> => {
     // Collect sessions from messages
-    const msgs = getLocalStore<ChatMessage[]>(KEYS.MESSAGES, INITIAL_MESSAGES);
+    const msgs = await DB.getMessages();
     const sessionMap: { [id: string]: ChatSession } = {};
 
     msgs.forEach(m => {

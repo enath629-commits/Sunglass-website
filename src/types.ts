@@ -55,6 +55,7 @@ export interface ChatMessage {
   senderId: string; // Could be client sessionId or adminEmail
   senderName: string;
   text: string;
+  imageUrl?: string;
   timestamp: string;
   isFromAdmin: boolean;
   sessionId: string; // Grouped by conversation

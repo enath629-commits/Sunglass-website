@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Product, PromoBanner, Order, ChatMessage, ChatSession, 
   AdminPermission, LandingConfig, CategoryType, PaymentMethodType 
@@ -33,6 +33,8 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [sessionMessages, setSessionMessages] = useState<ChatMessage[]>([]);
   const [chatReplyText, setChatReplyText] = useState('');
+  const [chatSelectedImage, setChatSelectedImage] = useState<string | null>(null);
+  const adminChatFileRef = useRef<HTMLInputElement>(null);
   const [adminsList, setAdminsList] = useState<AdminPermission[]>([]);
   const [cartLogs, setCartLogs] = useState<any[]>([]);
 
@@ -247,13 +249,14 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
   // Chat Sending Event
   const handleChatReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatReplyText.trim() || !selectedSessionId) return;
+    if ((!chatReplyText.trim() && !chatSelectedImage) || !selectedSessionId) return;
 
     const replyMsg: ChatMessage = {
       id: 'msg-' + Math.random().toString(36).substring(2, 9),
       senderId: adminEmail,
       senderName: adminName,
       text: chatReplyText.trim(),
+      imageUrl: chatSelectedImage || undefined,
       timestamp: new Date().toISOString(),
       isFromAdmin: true,
       sessionId: selectedSessionId
@@ -263,9 +266,53 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
     if (ok) {
       setSessionMessages((prev) => [...prev, replyMsg]);
       setChatReplyText('');
+      setChatSelectedImage(null);
       // Refresh session message references
       DB.getChatSessions().then(setSessions);
     }
+  };
+
+  const handleAdminImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 500;
+        const MAX_HEIGHT = 500;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setChatSelectedImage(dataUrl);
+
+        if (adminChatFileRef.current) {
+          adminChatFileRef.current.value = '';
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   // Product Saving Event
@@ -1258,7 +1305,7 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
         {activeTab === 'chats' && (
           <div className="space-y-6" id="chats-tab-panel">
             <div>
-              <h2 className="text-lg md:text-xl font-extrabold">রিয়েলটাইম গ্রাহক মেসেঞ্জার উইং</h2>
+              <h2 className="text-lg md:text-xl font-extrabold text-neutral-900 dark:text-white font-sans">রিয়েলটাইম গ্রাহক মেসেঞ্জার উইং</h2>
               <p className="text-xs text-neutral-400">আপনার ওয়েবসাইট থেকে যারা সরাসরি মেসেজ দিচ্ছে, তাদের সাথে কথা বলুন। প্রফেশনাল ফেসবুক মেসেঞ্জার এর মতো লেআউট।</p>
             </div>
 
@@ -1268,11 +1315,11 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
               
               {/* Left Column: Sessions List */}
               <div className="md:col-span-4 border-r dark:border-neutral-850 border-neutral-100 flex flex-col h-full bg-neutral-500/5">
-                <div className="p-3 border-b dark:border-neutral-850">
+                <div className="p-3 border-b dark:border-neutral-850 border-neutral-100 bg-neutral-500/5">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400">সক্রিয় চ্যাট সেশন ({sessions.length})</h4>
                 </div>
                 
-                <div className="flex-grow overflow-y-auto divide-y dark:divide-neutral-850" id="chats-session-selector">
+                <div className="flex-grow overflow-y-auto divide-y dark:divide-neutral-850 divide-neutral-100" id="chats-session-selector">
                   {sessions.length > 0 ? (
                     sessions.map((sess) => (
                       <button
@@ -1285,7 +1332,7 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
                             : 'hover:bg-neutral-500/10'
                         }`}
                       >
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-650 to-green-500 text-white flex items-center justify-center font-sans font-bold text-xs">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-650 to-green-500 text-white flex items-center justify-center font-sans font-bold text-xs flex-shrink-0">
                           {sess.clientName.substring(0, 2)}
                         </div>
                         <div className="flex-grow min-w-0">

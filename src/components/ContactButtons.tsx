@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   MessageSquare, Phone, X, Send, Sparkles, Check, 
-  HelpCircle, ShieldCheck, CheckCheck, Headphones 
+  HelpCircle, ShieldCheck, CheckCheck, Headphones, Image, Paperclip 
 } from 'lucide-react';
 import { ChatMessage, User } from '../types';
 import { DB } from '../lib/db';
@@ -21,6 +21,7 @@ export default function ContactButtons({
   const [showMessenger, setShowMessenger] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState('');
   const [userName, setUserName] = useState('');
   const [isVisitorSetup, setIsVisitorSetup] = useState(false);
@@ -28,6 +29,7 @@ export default function ContactButtons({
   const [visitorPhoneInput, setVisitorPhoneInput] = useState('');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize Session ID on mount
   useEffect(() => {
@@ -81,13 +83,14 @@ export default function ContactButtons({
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !sessionId) return;
+    if ((!inputText.trim() && !selectedImage) || !sessionId) return;
 
     const newMsg: ChatMessage = {
       id: 'msg-' + Math.random().toString(36).substring(2, 9),
       senderId: sessionId,
       senderName: userName || 'Anonymous Guest',
       text: inputText.trim(),
+      imageUrl: selectedImage || undefined,
       timestamp: new Date().toISOString(),
       isFromAdmin: false,
       sessionId: sessionId
@@ -97,7 +100,52 @@ export default function ContactButtons({
     if (ok) {
       setMessages((prev) => [...prev, newMsg]);
       setInputText('');
+      setSelectedImage(null);
     }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        // Compress using Canvas to save memory and database payload size
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 500;
+        const MAX_HEIGHT = 500;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setSelectedImage(dataUrl);
+
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleVisitorRegister = (e: React.FormEvent) => {
@@ -248,7 +296,16 @@ export default function ContactButtons({
                             ? 'bg-gradient-to-tr from-emerald-600 to-green-500 text-white rounded-tr-none'
                             : isDark ? 'bg-neutral-850 text-neutral-200 rounded-tl-none' : 'bg-white border border-neutral-200 text-neutral-700 rounded-tl-none shadow-xs'
                         }`}>
-                          <p>{msg.text}</p>
+                          {msg.imageUrl && (
+                            <img 
+                              src={msg.imageUrl} 
+                              alt="Uploaded Product" 
+                              className="max-w-[180px] sm:max-w-[220px] max-h-[160px] rounded-xl mb-1.5 object-cover shadow-sm cursor-pointer hover:brightness-95 transition"
+                              onClick={() => window.open(msg.imageUrl, '_blank')}
+                              referrerPolicy="no-referrer"
+                            />
+                          )}
+                          {msg.text && <p>{msg.text}</p>}
                           <span className={`text-[8px] block text-right mt-1 font-sans ${
                             isOwn ? 'text-white/70' : 'text-neutral-400'
                           }`}>
@@ -263,17 +320,63 @@ export default function ContactButtons({
               )}
             </div>
 
+            {/* Selected Image Attachment Preview Bar */}
+            {isVisitorSetup && selectedImage && (
+              <div className={`px-4 py-2 flex items-center justify-between border-t text-xs ${
+                isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-100'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <img 
+                      src={selectedImage} 
+                      alt="Selected Attachment" 
+                      className="w-10 h-10 rounded-lg object-cover border dark:border-neutral-750 border-neutral-200"
+                    />
+                  </div>
+                  <span className="text-[10px] text-neutral-400 font-sans">ছবি সংযুক্ত করা হয়েছে</span>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setSelectedImage(null)}
+                  className="p-1 px-2 rounded-lg hover:bg-neutral-500/10 text-red-500 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  মুছুন
+                </button>
+              </div>
+            )}
+
             {/* Messenger Footer Form */}
             {isVisitorSetup && (
-              <form onSubmit={handleSendMessage} className={`p-3 border-t flex gap-2 ${
+              <form onSubmit={handleSendMessage} className={`p-3 border-t flex items-center gap-2 ${
                 isDark ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-100 bg-white'
               }`} id="chat-input-form">
+                
+                {/* Hidden File Input for Image Selection */}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  ref={fileInputRef} 
+                  onChange={handleImageChange}
+                />
+                
+                {/* Image Attach Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`p-2 rounded-xl border hover:bg-neutral-500/10 transition-colors flex items-center justify-center cursor-pointer flex-shrink-0 ${
+                    isDark ? 'border-neutral-800 text-neutral-400' : 'border-neutral-250 text-neutral-600'
+                  }`}
+                  title="ছবি সংযুক্ত করুন"
+                >
+                  <Image size={15} />
+                </button>
+
                 <input
                   type="text"
-                  required
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Type your message here..."
+                  placeholder="আপনার বার্তা লিখুন..."
                   className={`flex-grow px-3 py-2 rounded-xl text-xs border focus:outline-none transition-all ${
                     isDark 
                       ? 'bg-neutral-850 border-neutral-800 text-white placeholder-neutral-500 focus:border-emerald-500' 
@@ -283,7 +386,7 @@ export default function ContactButtons({
                 <button
                   id="send-chat-btn"
                   type="submit"
-                  className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-650 to-green-500 text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                  className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-650 to-green-500 text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center flex-shrink-0"
                 >
                   <Send size={15} />
                 </button>
