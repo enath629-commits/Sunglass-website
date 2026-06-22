@@ -211,6 +211,20 @@ const INITIAL_ADMINS: AdminPermission[] = [
       manageAdmins: true
     },
     createdAt: new Date().toISOString()
+  },
+  {
+    id: 'adm2',
+    email: 'itzemon670@gmail.com',
+    name: 'Super Admin - Emon',
+    addedBy: 'System Creator',
+    permissions: {
+      manageProducts: true,
+      manageOrders: true,
+      manageBanners: true,
+      manageChats: true,
+      manageAdmins: true
+    },
+    createdAt: new Date().toISOString()
   }
 ];
 
@@ -401,16 +415,80 @@ export const initLocalDatabase = () => {
   getLocalStore(KEYS.ORDERS, INITIAL_ORDERS);
   getLocalStore(KEYS.MESSAGES, INITIAL_MESSAGES);
   getLocalStore(KEYS.NOTIFICATIONS, INITIAL_NOTIFICATIONS);
-  getLocalStore(KEYS.USERS, [
+  
+  const localUsers = getLocalStore<any[]>(KEYS.USERS, []);
+  const defaultAdmins = [
     {
       uid: 'admin-enath',
+      id: 'admin-enath',
       email: 'enath629@gmail.com',
       password: 'adminpassword',
       displayName: 'Admin Enath',
       phoneNumber: '01811122233',
       createdAt: new Date().toISOString()
+    },
+    {
+      uid: 'admin-emon',
+      id: 'admin-emon',
+      email: 'itzemon670@gmail.com',
+      password: 'Emon@36231',
+      displayName: 'Admin Emon',
+      phoneNumber: '01811122233',
+      createdAt: new Date().toISOString()
     }
-  ]);
+  ];
+
+  defaultAdmins.forEach(da => {
+    const exists = localUsers.some(u => u.email.toLowerCase() === da.email.toLowerCase());
+    if (!exists) {
+      localUsers.push(da);
+    } else {
+      const idx = localUsers.findIndex(u => u.email.toLowerCase() === da.email.toLowerCase());
+      localUsers[idx] = { ...localUsers[idx], ...da };
+    }
+  });
+
+  setLocalStore(KEYS.USERS, localUsers);
+
+  // Enforce local permission entries too
+  const localPermissionAdmins = getLocalStore<any[]>(KEYS.ADMINS, INITIAL_ADMINS);
+  const defaultPermissions = {
+    manageProducts: true,
+    manageOrders: true,
+    manageBanners: true,
+    manageChats: true,
+    manageAdmins: true
+  };
+
+  const permAdminsDefault = [
+    {
+      id: 'adm1',
+      email: 'enath629@gmail.com',
+      name: 'Super Admin - Enath',
+      addedBy: 'System Creator',
+      permissions: defaultPermissions,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'adm2',
+      email: 'itzemon670@gmail.com',
+      name: 'Super Admin - Emon',
+      addedBy: 'System Creator',
+      permissions: defaultPermissions,
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  permAdminsDefault.forEach(pa => {
+    const exists = localPermissionAdmins.some(a => a.email.toLowerCase() === pa.email.toLowerCase());
+    if (!exists) {
+      localPermissionAdmins.push(pa);
+    } else {
+      const idx = localPermissionAdmins.findIndex(a => a.email.toLowerCase() === pa.email.toLowerCase());
+      localPermissionAdmins[idx] = { ...localPermissionAdmins[idx], ...pa };
+    }
+  });
+  setLocalStore(KEYS.ADMINS, localPermissionAdmins);
 };
 
 initLocalDatabase();
@@ -740,13 +818,37 @@ export const DB = {
       try {
         let q = supabase.from('messages').select('*');
         if (sessionId) {
+          // Attempt camelCase column filter
           q = q.eq('sessionId', sessionId);
         }
-        const { data, error } = await q.order('timestamp', { ascending: true });
-        if (error) throw error;
-        if (data) return data as ChatMessage[];
+        let { data, error } = await q.order('timestamp', { ascending: true });
+        
+        if (error) {
+          console.warn('Supabase query with camelCase sessionId failed, trying lowercase sessionid...', error.message);
+          // Try lowercase field query instead
+          let q2 = supabase.from('messages').select('*');
+          if (sessionId) {
+            q2 = q2.eq('sessionid', sessionId);
+          }
+          const { data: data2, error: error2 } = await q2.order('timestamp', { ascending: true });
+          if (error2) throw error2;
+          data = data2;
+        }
+
+        if (data) {
+          return data.map((m: any) => ({
+            id: m.id,
+            senderId: m.senderId !== undefined ? m.senderId : (m.senderid !== undefined ? m.senderid : ''),
+            senderName: m.senderName !== undefined ? m.senderName : (m.sendername !== undefined ? m.sendername : ''),
+            text: m.text !== undefined ? m.text : '',
+            imageUrl: m.imageUrl !== undefined ? m.imageUrl : (m.imageurl !== undefined ? m.imageurl : undefined),
+            timestamp: m.timestamp !== undefined ? m.timestamp : new Date().toISOString(),
+            isFromAdmin: m.isFromAdmin !== undefined ? m.isFromAdmin : (m.isfromadmin !== undefined ? m.isfromadmin : false),
+            sessionId: m.sessionId !== undefined ? m.sessionId : (m.sessionid !== undefined ? m.sessionid : '')
+          }));
+        }
       } catch (err) {
-        console.warn('Supabase load messages failed', err);
+        console.warn('Supabase load messages failed entirely, falling back to local storage', err);
       }
     }
 
@@ -764,10 +866,38 @@ export const DB = {
 
     if (isSupabaseActive && supabase) {
       try {
-        const { error } = await supabase.from('messages').insert(msg);
-        if (error) throw error;
+        const camelPayload = {
+          id: msg.id,
+          senderId: msg.senderId,
+          senderName: msg.senderName,
+          text: msg.text,
+          imageUrl: msg.imageUrl || null,
+          timestamp: msg.timestamp,
+          isFromAdmin: msg.isFromAdmin,
+          sessionId: msg.sessionId
+        };
+
+        const lowerPayload = {
+          id: msg.id,
+          senderid: msg.senderId,
+          sendername: msg.senderName,
+          text: msg.text,
+          imageurl: msg.imageUrl || null,
+          timestamp: msg.timestamp,
+          isfromadmin: msg.isFromAdmin,
+          sessionid: msg.sessionId
+        };
+
+        const { error } = await supabase.from('messages').insert(camelPayload);
+        if (error) {
+          console.warn('Supabase send message with camelCase failed, trying lowercase fields...', error.message);
+          const { error: lowerErr } = await supabase.from('messages').insert(lowerPayload);
+          if (lowerErr) {
+            console.error('Supabase send message failed on both field configurations:', lowerErr.message);
+          }
+        }
       } catch (err) {
-        console.error('Supabase send message failure', err);
+        console.error('Supabase send message failure exception', err);
       }
     }
     return true;
@@ -926,7 +1056,7 @@ export const DB = {
     let existingId: string | null = null;
     if (existingIndex >= 0) {
       const existing = allUsers[existingIndex];
-      const isPlaceholder = existing.password === 'adminpassword' || existing.uid === 'admin-enath' || existing.email === 'enath629@gmail.com';
+      const isPlaceholder = existing.password === 'adminpassword' || existing.uid === 'admin-enath' || existing.email === 'enath629@gmail.com' || existing.email === 'itzemon670@gmail.com';
       if (!isPlaceholder) {
         return { success: false, error: 'এই ইমেইল ঠিকানা দিয়ে ইতিপূর্বে অ্যাকাউন্ট খোলা হয়েছে!' };
       }
@@ -988,8 +1118,30 @@ export const DB = {
 
   verifyUser: async (email: string, password: string): Promise<any | null> => {
     const emailLower = email.toLowerCase();
-    const all = await DB.getUsers();
     
+    // Explicit Super Admin bypass to guarantee admin logins succeed 100% of the time
+    if (emailLower === 'enath629@gmail.com' && password === 'adminpassword') {
+      return {
+        uid: 'admin-enath',
+        id: 'admin-enath',
+        email: 'enath629@gmail.com',
+        displayName: 'Admin Enath',
+        phoneNumber: '01811122233',
+        createdAt: new Date().toISOString()
+      };
+    }
+    if (emailLower === 'itzemon670@gmail.com' && password === 'Emon@36231') {
+      return {
+        uid: 'admin-emon',
+        id: 'admin-emon',
+        email: 'itzemon670@gmail.com',
+        displayName: 'Admin Emon',
+        phoneNumber: '01811122233',
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    const all = await DB.getUsers();
     const matched = all.find(
       (u: any) => u.email.toLowerCase() === emailLower && u.password === password
     );
@@ -1019,9 +1171,19 @@ export const DB = {
     setLocalStore(KEYS.USERS, [
       {
         uid: 'admin-enath',
+        id: 'admin-enath',
         email: 'enath629@gmail.com',
         password: 'adminpassword',
         displayName: 'Admin Enath',
+        phoneNumber: '01811122233',
+        createdAt: new Date().toISOString()
+      },
+      {
+        uid: 'admin-emon',
+        id: 'admin-emon',
+        email: 'itzemon670@gmail.com',
+        password: 'Emon@36231',
+        displayName: 'Admin Emon',
         phoneNumber: '01811122233',
         createdAt: new Date().toISOString()
       }

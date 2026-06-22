@@ -438,7 +438,8 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
 
   const handleDeleteAdmin = async (id: string) => {
     const adminToDelete = adminsList.find(a => a.id === id);
-    if (adminToDelete?.email.toLowerCase() === 'enath629@gmail.com') {
+    const emailLower = adminToDelete?.email.toLowerCase();
+    if (emailLower === 'enath629@gmail.com' || emailLower === 'itzemon670@gmail.com') {
       alert('সুপার অ্যাডমিনের অ্যাকাউন্টটি মুছে ফেলা সম্ভব নয়!');
       return;
     }
@@ -1740,9 +1741,9 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
                                 id={`del-admin-${adm.id}`}
                                 onClick={() => handleDeleteAdmin(adm.id)}
                                 className={`p-1.5 rounded-lg hover:bg-neutral-500/10 cursor-pointer ${
-                                  adm.email === 'enath629@gmail.com' ? 'opacity-30 cursor-not-allowed text-neutral-500' : 'text-red-500'
+                                  (adm.email === 'enath629@gmail.com' || adm.email === 'itzemon670@gmail.com') ? 'opacity-30 cursor-not-allowed text-neutral-500' : 'text-red-500'
                                 }`}
-                                disabled={adm.email === 'enath629@gmail.com'}
+                                disabled={adm.email === 'enath629@gmail.com' || adm.email === 'itzemon670@gmail.com'}
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -1970,6 +1971,15 @@ VALUES (
   '{"manageProducts": true, "manageOrders": true, "manageBanners": true, "manageChats": true, "manageAdmins": true}'
 ) ON CONFLICT (email) DO NOTHING;
 
+INSERT INTO admins (id, email, name, "addedBy", permissions)
+VALUES (
+  'adm-super2', 
+  'itzemon670@gmail.com', 
+  'Super Admin - Emon', 
+  'System Creator', 
+  '{"manageProducts": true, "manageOrders": true, "manageBanners": true, "manageChats": true, "manageAdmins": true}'
+) ON CONFLICT (email) DO NOTHING;
+
 -- Insert default admin user profile
 INSERT INTO users (id, email, password, "displayName", "phoneNumber")
 VALUES (
@@ -1977,6 +1987,15 @@ VALUES (
   'enath629@gmail.com',
   'adminpassword',
   'Admin Enath',
+  '01811122233'
+) ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO users (id, email, password, "displayName", "phoneNumber")
+VALUES (
+  'admin-emon',
+  'itzemon670@gmail.com',
+  'Emon@36231',
+  'Admin Emon',
   '01811122233'
 ) ON CONFLICT (email) DO NOTHING;`}
                   </pre>

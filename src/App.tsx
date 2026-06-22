@@ -122,7 +122,7 @@ export default function App() {
   };
 
   // Check if current logged-in email is allowed admin permissions
-  const isSuperAdmin = currentUser?.email.toLowerCase() === 'enath629@gmail.com';
+  const isSuperAdmin = currentUser ? (currentUser.email.toLowerCase() === 'enath629@gmail.com' || currentUser.email.toLowerCase() === 'itzemon670@gmail.com') : false;
   const isHelperAdmin = currentUser ? admins.some(a => a.email.toLowerCase() === currentUser.email.toLowerCase()) : false;
   const isUserAdmin = isSuperAdmin || isHelperAdmin;
 
@@ -605,7 +605,7 @@ export default function App() {
         {/* copyright foot indicator branding with superadmin secret route advice */}
         <div className="mt-12 pt-6 border-t border-neutral-900 text-center text-[10px] text-neutral-500 px-4">
           <p>© {new Date().getFullYear()} Chrono & Shade Inc. All rights reserved. Designed & Hosted by Creative Wings.</p>
-          <p className="mt-1.5 opacity-60">Admin Entry: Access admin controls by logging in with super admin email: <b>enath629@gmail.com</b></p>
+          <p className="mt-1.5 opacity-60">Admin Entry: Access admin controls by logging in with super admin email: <b>itzemon670@gmail.com</b> </p>
         </div>
       </footer>
     </div>
