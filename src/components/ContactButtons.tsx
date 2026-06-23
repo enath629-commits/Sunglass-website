@@ -18,148 +18,6 @@ export default function ContactButtons({
   currentUser, theme, whatsappNumber, hotlineNumber 
 }: ContactButtonsProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [showMessenger, setShowMessenger] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState('');
-  const [userName, setUserName] = useState('');
-  const [isVisitorSetup, setIsVisitorSetup] = useState(false);
-  const [visitorNameInput, setVisitorNameInput] = useState('');
-  const [visitorPhoneInput, setVisitorPhoneInput] = useState('');
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Initialize Session ID on mount
-  useEffect(() => {
-    let sess = localStorage.getItem('__chat_session_id__');
-    if (!sess) {
-      sess = 'sess-client-' + Math.random().toString(36).substring(2, 11);
-      localStorage.setItem('__chat_session_id__', sess);
-    }
-    setSessionId(sess);
-
-    const savedVisitorName = localStorage.getItem('__chat_visitor_name__');
-    if (savedVisitorName) {
-      setUserName(savedVisitorName);
-      setIsVisitorSetup(true);
-    }
-  }, []);
-
-  // Update Username if user logs in
-  useEffect(() => {
-    if (currentUser) {
-      setUserName(currentUser.displayName);
-      setIsVisitorSetup(true);
-    }
-  }, [currentUser]);
-
-  // Loading existing message history & Polling for Real-Time admin responses
-  useEffect(() => {
-    if (!sessionId || !showMessenger) return;
-
-    let active = true;
-    const fetchChatMessages = async () => {
-      const msgs = await DB.getMessages(sessionId);
-      if (active) {
-        setMessages(msgs);
-      }
-    };
-
-    fetchChatMessages();
-    const interval = setInterval(fetchChatMessages, 2500); // Poll every 2.5s for snappy updates
-
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [sessionId, showMessenger]);
-
-  // Scroll to bottom on updates
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, showMessenger, isVisitorSetup]);
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if ((!inputText.trim() && !selectedImage) || !sessionId) return;
-
-    const newMsg: ChatMessage = {
-      id: 'msg-' + Math.random().toString(36).substring(2, 9),
-      senderId: sessionId,
-      senderName: userName || 'Anonymous Guest',
-      text: inputText.trim(),
-      imageUrl: selectedImage || undefined,
-      timestamp: new Date().toISOString(),
-      isFromAdmin: false,
-      sessionId: sessionId
-    };
-
-    const ok = await DB.sendMessage(newMsg);
-    if (ok) {
-      setMessages((prev) => [...prev, newMsg]);
-      setInputText('');
-      setSelectedImage(null);
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new window.Image();
-      img.onload = () => {
-        // Compress using Canvas to save memory and database payload size
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 500;
-        const MAX_HEIGHT = 500;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        setSelectedImage(dataUrl);
-
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleVisitorRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!visitorNameInput.trim()) return;
-
-    const finalName = visitorNameInput.trim();
-    localStorage.setItem('__chat_visitor_name__', finalName);
-    if (visitorPhoneInput) {
-      localStorage.setItem('__chat_visitor_phone__', visitorPhoneInput);
-    }
-    setUserName(finalName);
-    setIsVisitorSetup(true);
-  };
 
   const cleanWhatsappLink = `https://wa.me/${whatsappNumber.replace(/\+/g, '').replace(/\s/g, '')}`;
   const isDark = theme === 'dark';
@@ -167,235 +25,6 @@ export default function ContactButtons({
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" id="floating-contact-panel">
       
-      {/* Expanded Messenger Dialog box */}
-      <AnimatePresence>
-        {showMessenger && (
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className={`w-[320px] sm:w-[360px] h-[450px] shadow-2xl rounded-2xl border overflow-hidden flex flex-col mb-2 z-50 ${
-              isDark 
-                ? 'bg-neutral-900 border-neutral-800' 
-                : 'bg-white border-neutral-100'
-            }`}
-            id="chat-messenger-box"
-          >
-            {/* Messenger Header with Status */}
-            <div className="p-4 bg-gradient-to-r from-emerald-700 via-teal-600 to-teal-500 text-white flex items-center justify-between shadow-md">
-              <div className="flex items-center gap-2.5">
-                <div className="relative w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-sans font-bold">
-                  CS
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-emerald-600 rounded-full animate-ping" />
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 border-2 border-emerald-600 rounded-full" />
-                </div>
-                <div>
-                  <h4 className="font-sans font-bold text-xs sm:text-sm">Live Chat Assistant</h4>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[9px] text-emerald-100 font-light">Admin is online to assist you</span>
-                  </div>
-                </div>
-              </div>
-              <button
-                id="close-messenger-btn"
-                onClick={() => setShowMessenger(false)}
-                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer flex items-center justify-center gap-1 text-xs"
-                title="Close chat"
-              >
-                <span className="hidden sm:inline font-sans text-[10px]">Close</span>
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Messenger Body Workspace */}
-            <div className={`flex-grow overflow-y-auto p-4 space-y-3 flex flex-col ${
-              isDark ? 'bg-neutral-950/80' : 'bg-neutral-50/50'
-            }`} id="messenger-body-scroller">
-              
-              {!isVisitorSetup ? (
-                /* Prompt Guest Visitors to identify name/phone before chat */
-                <form onSubmit={handleVisitorRegister} className="my-auto space-y-3 p-2 text-center" id="visitor-setup-form">
-                  <div className="mx-auto w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-1">
-                    <Sparkles size={20} />
-                  </div>
-                  <div className="space-y-1">
-                    <h5 className={`font-semibold text-xs sm:text-sm ${isDark ? 'text-white' : 'text-neutral-800'}`}>
-                      Start Conversation
-                    </h5>
-                    <p className="text-[10px] sm:text-xs text-neutral-400 max-w-xs leading-normal">
-                      Please enter your name and mobile number to speak with our support representative.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2 text-left">
-                    <input
-                      type="text"
-                      required
-                      value={visitorNameInput}
-                      onChange={(e) => setVisitorNameInput(e.target.value)}
-                      placeholder="Your Name (e.g. John Doe)*"
-                      className={`w-full p-2.5 rounded-xl text-xs border focus:outline-none transition-all ${
-                        isDark 
-                          ? 'bg-neutral-850 border-neutral-800 text-white placeholder-neutral-500 focus:border-emerald-500' 
-                          : 'bg-white border-neutral-250 text-neutral-800 placeholder-neutral-400 focus:border-emerald-600'
-                      }`}
-                    />
-                    <input
-                      type="tel"
-                      value={visitorPhoneInput}
-                      onChange={(e) => setVisitorPhoneInput(e.target.value)}
-                      placeholder="Mobile Number (e.g. +88017xxxxxxxx)"
-                      className={`w-full p-2.5 rounded-xl text-xs border focus:outline-none transition-all ${
-                        isDark 
-                          ? 'bg-neutral-850 border-neutral-800 text-white placeholder-neutral-500 focus:border-emerald-500' 
-                          : 'bg-white border-neutral-250 text-neutral-800 placeholder-neutral-400 focus:border-emerald-600'
-                      }`}
-                    />
-                  </div>
-
-                  <button
-                    id="submit-visitor-btn"
-                    type="submit"
-                    className="w-full mt-2 py-3 px-4 rounded-full text-xs sm:text-sm font-black text-white bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] border border-t-white/50 border-[#2dd4bf] border-b-[4px] active:border-b-[1px] active:translate-y-[3px] shadow-[0_4px_12px_rgba(20,184,166,0.3)] cursor-pointer transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <span>Start Chatting</span>
-                    <MessageSquare size={14} />
-                  </button>
-                </form>
-              ) : (
-                /* Connected Chat Log Workspace */
-                <>
-                  {/* Default Welcome Prompt message */}
-                  <div className="flex gap-2.5 max-w-[85%]">
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] overflow-hidden flex-shrink-0 font-sans font-bold">
-                      A
-                    </div>
-                    <div className={`p-3 rounded-2xl rounded-tl-none text-xs leading-normal ${
-                      isDark ? 'bg-neutral-850 text-neutral-200' : 'bg-white border border-neutral-200 text-neutral-700 shadow-xs'
-                    }`}>
-                      Hello <b>{userName}</b>! Welcome to Chrono & Shade. How can we help you today with premium watches and lifestyle sunglasses?
-                    </div>
-                  </div>
-
-                  {/* Rendered dialog thread */}
-                  {messages.map((msg) => {
-                    const isOwn = msg.senderId === sessionId || !msg.isFromAdmin;
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex gap-2.5 max-w-[82%] ${isOwn ? 'self-end flex-row-reverse' : ''}`}
-                        id={`chat-msg-${msg.id}`}
-                      >
-                        {!isOwn && (
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-600 to-emerald-400 text-white flex items-center justify-center text-[10px] overflow-hidden flex-shrink-0 font-sans font-semibold">
-                            AD
-                          </div>
-                        )}
-                        <div className={`p-3 rounded-2xl text-xs leading-relaxed whitespace-pre-line ${
-                          isOwn
-                            ? 'bg-gradient-to-tr from-emerald-600 to-green-500 text-white rounded-tr-none'
-                            : isDark ? 'bg-neutral-850 text-neutral-200 rounded-tl-none' : 'bg-white border border-neutral-200 text-neutral-700 rounded-tl-none shadow-xs'
-                        }`}>
-                          {msg.imageUrl && (
-                            <img 
-                              src={msg.imageUrl} 
-                              alt="Uploaded Product" 
-                              className="max-w-[180px] sm:max-w-[220px] max-h-[160px] rounded-xl mb-1.5 object-cover shadow-sm cursor-pointer hover:brightness-95 transition"
-                              onClick={() => window.open(msg.imageUrl, '_blank')}
-                              referrerPolicy="no-referrer"
-                            />
-                          )}
-                          {msg.text && <p>{msg.text}</p>}
-                          <span className={`text-[8px] block text-right mt-1 font-sans ${
-                            isOwn ? 'text-white/70' : 'text-neutral-400'
-                          }`}>
-                            {new Date(msg.timestamp).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={chatEndRef} />
-                </>
-              )}
-            </div>
-
-            {/* Selected Image Attachment Preview Bar */}
-            {isVisitorSetup && selectedImage && (
-              <div className={`px-4 py-2 flex items-center justify-between border-t text-xs ${
-                isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-50 border-neutral-100'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <img 
-                      src={selectedImage} 
-                      alt="Selected Attachment" 
-                      className="w-10 h-10 rounded-lg object-cover border dark:border-neutral-750 border-neutral-200"
-                    />
-                  </div>
-                  <span className="text-[10px] text-neutral-400 font-sans">ছবি সংযুক্ত করা হয়েছে</span>
-                </div>
-                <button 
-                  type="button" 
-                  onClick={() => setSelectedImage(null)}
-                  className="p-1 px-2 rounded-lg hover:bg-neutral-500/10 text-red-500 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  মুছুন
-                </button>
-              </div>
-            )}
-
-            {/* Messenger Footer Form */}
-            {isVisitorSetup && (
-              <form onSubmit={handleSendMessage} className={`p-3 border-t flex items-center gap-2 ${
-                isDark ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-100 bg-white'
-              }`} id="chat-input-form">
-                
-                {/* Hidden File Input for Image Selection */}
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  ref={fileInputRef} 
-                  onChange={handleImageChange}
-                />
-                
-                {/* Image Attach Button */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`p-2 rounded-xl border hover:bg-neutral-500/10 transition-colors flex items-center justify-center cursor-pointer flex-shrink-0 ${
-                    isDark ? 'border-neutral-800 text-neutral-400' : 'border-neutral-250 text-neutral-600'
-                  }`}
-                  title="ছবি সংযুক্ত করুন"
-                >
-                  <Image size={15} />
-                </button>
-
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="আপনার বার্তা লিখুন..."
-                  className={`flex-grow px-3 py-2 rounded-xl text-xs border focus:outline-none transition-all ${
-                    isDark 
-                      ? 'bg-neutral-850 border-neutral-800 text-white placeholder-neutral-500 focus:border-emerald-500' 
-                      : 'bg-neutral-50 border-neutral-200 text-neutral-805 placeholder-neutral-400 focus:border-emerald-600 focus:bg-white'
-                  }`}
-                />
-                <button
-                  id="send-chat-btn"
-                  type="submit"
-                  className="p-2.5 rounded-xl bg-gradient-to-tr from-emerald-650 to-green-500 text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center flex-shrink-0"
-                >
-                  <Send size={15} />
-                </button>
-              </form>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Floating Buttons Tray */}
       <div className="flex flex-col gap-2 items-end">
         
@@ -413,7 +42,7 @@ export default function ContactButtons({
               <motion.a
                 id="contact-call-btn"
                 href={`tel:${hotlineNumber}`}
-                className="flex items-center gap-2 p-3 bg-gradient-to-b from-[#ff7a60] via-[#ff5a3c] to-[#e03a1d] border border-t-white/50 border-[#ff8a74] border-b-[4px] active:border-b-[1px] active:translate-y-[3px] text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-black shadow-orange-500/20"
+                className="flex items-center gap-2 p-3 bg-gradient-to-b from-[#ff7a60] via-[#ff5a3c] to-[#e03a1d] border border-t-white/50 border-[#ff8a74] border-b-[4px] active:border-b-[1px] active:translate-y-[3px] text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-black shadow-orange-500/20 text-decoration-none"
                 whileHover={{ y: -2 }}
               >
                 <span className="bg-black/20 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide">Hotline</span>
@@ -427,7 +56,7 @@ export default function ContactButtons({
                 href={cleanWhatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 p-3 bg-gradient-to-b from-sky-450 via-sky-550 to-sky-650 border border-t-white/50 border-sky-350 border-b-[4px] active:border-b-[1px] active:translate-y-[3px] text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-black shadow-sky-500/10"
+                className="flex items-center gap-2 p-3 bg-gradient-to-b from-emerald-500 via-emerald-600 to-emerald-700 border border-t-white/50 border-emerald-400 border-b-[4px] active:border-b-[1px] active:translate-y-[3px] text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-black shadow-emerald-500/10 text-decoration-none"
                 whileHover={{ y: -2 }}
               >
                 <span className="bg-black/20 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide font-sans">WhatsApp</span>
@@ -436,21 +65,6 @@ export default function ContactButtons({
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.197-.242-.584-.487-.506-.669-.516-.174-.007-.371-.012-.568-.012-.197 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.455 5.703 1.456h.004c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                 </svg>
               </motion.a>
-
-              {/* Chat trigger */}
-              <motion.button
-                id="chat-messenger-trigger"
-                onClick={() => {
-                  setShowMessenger(true);
-                  setIsOpen(false);
-                }}
-                className="flex items-center gap-2 p-3 bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] border border-t-white/40 border-[#2dd4bf] border-b-[4px] active:border-b-[1px] active:translate-y-[3px] text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-black cursor-pointer shadow-teal-500/20"
-                whileHover={{ y: -2 }}
-              >
-                <span className="bg-black/20 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide font-sans">Live Chat</span>
-                <span>Open Chat</span>
-                <MessageSquare size={15} />
-              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -463,7 +77,7 @@ export default function ContactButtons({
             className="w-14 h-14 rounded-full bg-gradient-to-b from-[#14b8a6] via-[#0d9488] to-[#0f766e] border border-t-white/40 border-[#2dd4bf] border-b-[5px] active:border-b-[1.5px] text-white shadow-xl hover:shadow-teal-500/30 flex items-center justify-center transition-all cursor-pointer border-white/10 focus:outline-none relative group"
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.94 }}
-            title="যোগাযোগ ও লাইভ চ্যাট"
+            title="যোগাযোগ করুন (WhatsApp & Hotline)"
           >
             {/* Pulsing Aura Rings */}
             {!isOpen && (
@@ -491,7 +105,7 @@ export default function ContactButtons({
                   exit={{ rotate: -45, opacity: 0 }}
                   className="relative flex items-center justify-center"
                 >
-                  <MessageSquare size={24} className="stroke-[2.2] animate-bounce-slow text-white" />
+                  <Phone size={22} className="stroke-[2.2] animate-bounce-slow text-white" />
                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
                 </motion.div>
               )}

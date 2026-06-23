@@ -18,9 +18,10 @@ interface AdminPanelProps {
   adminEmail: string;
   adminName: string;
   theme: 'light' | 'dark';
+  onRefresh?: () => void;
 }
 
-export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelProps) {
+export default function AdminPanel({ adminEmail, adminName, theme, onRefresh }: AdminPanelProps) {
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'orders' | 'chats' | 'banners' | 'admins' | 'database' | 'reviews' | 'settings' | 'customers'>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -163,6 +164,10 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
     setDbConnected(DB.isSupabaseConnected());
     const clogs = DB.getCartNotifications();
     setCartLogs(clogs);
+
+    if (onRefresh) {
+      onRefresh();
+    }
   };
 
   useEffect(() => {
@@ -1880,7 +1885,7 @@ export default function AdminPanel({ adminEmail, adminName, theme }: AdminPanelP
                     className="flex-grow p-3 rounded-xl bg-black/60 font-mono text-[9px] text-emerald-300 overflow-x-auto max-h-[300px] select-all leading-normal"
                   >
 {`-- 1. Products Table
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   category TEXT NOT NULL CHECK (category IN ('sunglass', 'watch')),
@@ -1895,7 +1900,7 @@ CREATE TABLE products (
 );
 
 -- 2. Orders Table
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
   "userId" TEXT NOT NULL,
   "userName" TEXT NOT NULL,
@@ -1912,7 +1917,7 @@ CREATE TABLE orders (
 );
 
 -- 3. Reviews Table
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
   id TEXT PRIMARY KEY,
   "productId" TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   "userName" TEXT NOT NULL,
@@ -1922,7 +1927,7 @@ CREATE TABLE reviews (
 );
 
 -- 4. Messages Table
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   id TEXT PRIMARY KEY,
   "senderId" TEXT NOT NULL,
   "senderName" TEXT NOT NULL,
@@ -1934,7 +1939,7 @@ CREATE TABLE messages (
 );
 
 -- 5. Banners Table
-CREATE TABLE banners (
+CREATE TABLE IF NOT EXISTS banners (
   id TEXT PRIMARY KEY,
   "imageUrl" TEXT NOT NULL,
   title TEXT NOT NULL,
@@ -1943,7 +1948,7 @@ CREATE TABLE banners (
 );
 
 -- 6. Admins Permissions Table
-CREATE TABLE admins (
+CREATE TABLE IF NOT EXISTS admins (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
@@ -1953,7 +1958,7 @@ CREATE TABLE admins (
 );
 
 -- 7. Customer Users Table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,

@@ -1083,6 +1083,7 @@ export const DB = {
   // LIVE CHAT
   // ----------------------------------------------------------------
   getMessages: async (sessionId?: string): Promise<ChatMessage[]> => {
+    let supabaseMsgs: ChatMessage[] = [];
     if (isSupabaseActive && supabase) {
       try {
         let q = supabase.from('messages').select('*');
@@ -1105,7 +1106,7 @@ export const DB = {
         }
 
         if (data) {
-          return data.map((m: any) => ({
+          supabaseMsgs = data.map((m: any) => ({
             id: m.id,
             senderId: m.senderId !== undefined ? m.senderId : (m.senderid !== undefined ? m.senderid : ''),
             senderName: m.senderName !== undefined ? m.senderName : (m.sendername !== undefined ? m.sendername : ''),
@@ -1121,11 +1122,47 @@ export const DB = {
       }
     }
 
-    const all = getLocalStore<ChatMessage[]>(KEYS.MESSAGES, INITIAL_MESSAGES);
+    // Load local messages as the primary fallback and base ground
+    const localMsgs = getLocalStore<ChatMessage[]>(KEYS.MESSAGES, INITIAL_MESSAGES);
+    const filteredLocal = sessionId ? localMsgs.filter(m => m.sessionId === sessionId) : localMsgs;
+
+    // Use a Map to combine and deduplicate both sources by message ID
+    const mergedMap = new Map<string, ChatMessage>();
+    filteredLocal.forEach(m => mergedMap.set(m.id, m));
+    supabaseMsgs.forEach(m => mergedMap.set(m.id, m));
+
+    // Convert back to a sorted list
+    const sortedResult = Array.from(mergedMap.values()).sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    // Sync any newly seen/received remote messages (like admin replies) back to local storage
     if (sessionId) {
-      return all.filter(m => m.sessionId === sessionId);
+      const updatedLocal = [...localMsgs];
+      sortedResult.forEach(m => {
+        const existIdx = updatedLocal.findIndex(lm => lm.id === m.id);
+        if (existIdx > -1) {
+          updatedLocal[existIdx] = m;
+        } else {
+          updatedLocal.push(m);
+        }
+      });
+      setLocalStore(KEYS.MESSAGES, updatedLocal);
+    } else {
+      // For general full-list queries (admin panel views), update everything
+      const updatedFull = [...localMsgs];
+      sortedResult.forEach(m => {
+        const existIdx = updatedFull.findIndex(lm => lm.id === m.id);
+        if (existIdx > -1) {
+          updatedFull[existIdx] = m;
+        } else {
+          updatedFull.push(m);
+        }
+      });
+      setLocalStore(KEYS.MESSAGES, updatedFull);
     }
-    return all.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    return sortedResult;
   },
 
   sendMessage: async (msg: ChatMessage): Promise<boolean> => {

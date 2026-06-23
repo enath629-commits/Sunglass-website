@@ -50,6 +50,23 @@ export default function App() {
   const [showAdminView, setShowAdminView] = useState(false);
   const [buyNowDirectActive, setBuyNowDirectActive] = useState(false);
 
+  // Load initial products, banners, configs & admins from simulated DB
+  const loadAppData = async () => {
+    const pList = await DB.getProducts();
+    setProducts(pList);
+
+    const bList = await DB.getBanners();
+    setBanners(bList);
+
+    const aList = await DB.getAdmins();
+    setAdmins(aList);
+
+    const dbConfig = await DB.getConfig();
+    if (dbConfig) {
+      setConfig(dbConfig);
+    }
+  };
+
   // Sync Initial Setup on mount
   useEffect(() => {
     // Read theme from localStorage
@@ -71,23 +88,6 @@ export default function App() {
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
-
-    // Load initial products, banners, configs & admins from simulated DB
-    const loadAppData = async () => {
-      const pList = await DB.getProducts();
-      setProducts(pList);
-
-      const bList = await DB.getBanners();
-      setBanners(bList);
-
-      const aList = await DB.getAdmins();
-      setAdmins(aList);
-
-      const dbConfig = await DB.getConfig();
-      if (dbConfig) {
-        setConfig(dbConfig);
-      }
-    };
 
     loadAppData();
     
@@ -274,6 +274,7 @@ export default function App() {
               adminEmail={currentUser?.email || ''}
               adminName={currentUser?.displayName || 'Admin Assistant'}
               theme={theme}
+              onRefresh={loadAppData}
             />
           </motion.div>
 
